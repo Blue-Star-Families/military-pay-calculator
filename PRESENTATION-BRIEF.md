@@ -42,8 +42,8 @@ Open each link in a tab beforehand.
 
 | | BAH | Take-home |
 |---|---|---|
-| Fort Bragg, NC | $1,806 | **$5,942/mo** |
-| JBLM / Tacoma, WA | $2,556 | **$6,692/mo** |
+| Fort Bragg, NC | $1,806 | **$5,947/mo** |
+| JBLM / Tacoma, WA | $2,556 | **$6,697/mo** |
 
 **+$750/month · +$9,000/year**
 
@@ -55,8 +55,8 @@ Open each link in a tab beforehand.
 
 | | BAH | Take-home |
 |---|---|---|
-| Fort Hood, TX | $2,340 | **$8,560/mo** |
-| San Diego, CA | $4,518 | **$10,738/mo** |
+| Fort Hood, TX | $2,340 | **$8,565/mo** |
+| San Diego, CA | $4,518 | **$10,743/mo** |
 
 **+$2,178/month · +$26,136/year**
 
@@ -95,7 +95,7 @@ Every layer is validated against a source **outside** the tool:
 | FICA | Statutory rates, wage base, and Additional Medicare thresholds |
 | State tax | Published state schedules; hand-computed arithmetic confirmed |
 
-**198 automated tests** run in one command, so next January's rate update is
+**533 automated tests** run in one command, so next January's rate update is
 verifiable rather than hoped-for.
 
 Two concrete findings worth mentioning:
@@ -109,11 +109,12 @@ Two concrete findings worth mentioning:
 ## Expect these questions
 
 **"Has anyone checked it against a real LES?"**
-> Not yet — and that's the honest answer. It's validated against every official
-> published source, but not against a live pay statement. That's my next step,
-> and I'd love two or three of you to compare it against your own LES this week.
+> Yes, one so far: an O-3's June 2026 LES. BAS, Social Security and Medicare
+> matched to within a cent; federal tax came out about $27/month high, which is expected because
+> the tool estimates annual tax ÷ 12 rather than DFAS withholding tables. One LES
+> is not many, so I'd love two or three of you to compare it against your own.
 
-*(This turns the biggest gap into audience participation.)*
+*(This turns the remaining gap into audience participation.)*
 
 **"How accurate is it?"**
 > Gross pay and allowances are dollar-accurate. Take-home is an estimate — the
