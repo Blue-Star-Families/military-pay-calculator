@@ -7,7 +7,7 @@ p.title  = 'Military Take-Home Pay Estimator — User Guide';
 const NAVY='1F3162', BLUE='0474BB', RED='B31F36', ICE='B9D6F0',
       WHITE='FFFFFF', INK='1F2A37', MUTE='5B6B7B', BG='EEF3F8', LINE='D3E0EE';
 const H='Cambria', B='Calibri';
-const URL='blue-star-families1.github.io/military-pay-calculator';
+const URL='blue-star-families.github.io/military-pay-calculator';
 
 const W=13.3, HH=7.5, M=0.7;
 

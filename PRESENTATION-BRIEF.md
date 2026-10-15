@@ -1,7 +1,7 @@
 # Military Take-Home Pay Estimator — Presentation Brief
 
-**Live tool:** https://blue-star-families1.github.io/military-pay-calculator/
-**Repo:** https://github.com/Blue-Star-Families1/military-pay-calculator
+**Live tool:** https://blue-star-families.github.io/military-pay-calculator/
+**Repo:** https://github.com/Blue-Star-Families/military-pay-calculator
 
 ---
 
@@ -153,4 +153,4 @@ Pick whichever fits your audience:
 > paycheck actually looks like after taxes at your next duty station — and
 > compares two locations side by side. Free, private (nothing leaves your
 > browser), and updated for 2026.
-> https://blue-star-families1.github.io/military-pay-calculator/
+> https://blue-star-families.github.io/military-pay-calculator/

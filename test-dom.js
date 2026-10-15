@@ -30,7 +30,7 @@ catch (e) {
 }
 
 const DIR = __dirname;
-const URL_ = 'https://blue-star-families1.github.io/military-pay-calculator/';
+const URL_ = 'https://blue-star-families.github.io/military-pay-calculator/';
 
 // Inline bah-data.js so script execution order matches a real browser.
 let html = fs.readFileSync(path.join(DIR, 'index.html'), 'utf8');

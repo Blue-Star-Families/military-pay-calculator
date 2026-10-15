@@ -4,7 +4,7 @@
 
 A single-file, dependency-free web app that estimates a U.S. service member's monthly **gross** and **take-home** pay — basic pay, allowances, special pays, and estimated federal, FICA, and state taxes — and lets you **compare two duty stations** side-by-side to see how a move (PCS) changes the paycheck.
 
-**▶ Live tool: https://blue-star-families1.github.io/military-pay-calculator/**
+**▶ Live tool: https://blue-star-families.github.io/military-pay-calculator/**
 
 ## Why
 
