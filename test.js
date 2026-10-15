@@ -591,6 +591,136 @@ G('State tax: hand-computed golden values');
   // The sd here is exemption + standard deduction combined; guard the combination.
   ok('MS sd combines the $6,000/$12,000 exemption with the $2,300/$4,600 deduction',
      A.STATES.MS.sd[0] === 6000+2300 && A.STATES.MS.sd[1] === 12000+4600);
+
+  // NC verified Oct 2026: S.L. 2023-134 rate, G.S. 105-153.5 deduction. Literals.
+  ok('NC is flat 3.99% for 2026, not the 2025 4.25%', A.STATES.NC.flat === 0.0399);
+  ok('NC deduction is 12,750 / 25,500 (G.S. 105-153.5)',
+     A.STATES.NC.sd[0] === 12750 && A.STATES.NC.sd[1] === 25500);
+
+  /* NE verified Oct 2026 against NDOR's own 2026 Nebraska Tax Table. These are
+     NDOR's printed figures, not ours recomputed — the table rounds to the
+     dollar, so tolerance is $1. stateTaxAnnual subtracts the deduction itself,
+     so each call adds it back to land on the stated taxable income. The tax
+     table "calculates tax to the midpoint of the bracket", hence 4,310 and 8,310. */
+  eq('NE single, $79,860 taxable = NDOR worksheet $3,333',
+     A.stateTaxAnnual('NE', 79860+8850, 'single', 0), 3333, 1);
+  eq('NE joint, $79,860 taxable = NDOR worksheet $3,032',
+     A.stateTaxAnnual('NE', 79860+17700, 'mfj', 0), 3032, 1);
+  eq('NE single row 4,260-4,360 = NDOR $108 (crosses the 2.46/3.51 break)',
+     A.stateTaxAnnual('NE', 4310+8850, 'single', 0), 108, 1);
+  eq('NE joint row 8,260-8,360 = NDOR $205 (crosses the joint break)',
+     A.stateTaxAnnual('NE', 8310+17700, 'mfj', 0), 205, 1);
+  // Guard against applying NDOR's *2027* figures, which appear on a form dated
+  // Sept 2026 and were once presented as 2026 by a search summary.
+  ok('NE is not carrying the 2027 deduction (9,100 / 18,200)',
+     A.STATES.NE.sd[0] !== 9100 && A.STATES.NE.sd[1] !== 18200);
+  ok('NE is not carrying the 2027 top rate (3.99%)',
+     A.STATES.NE.b.single[A.STATES.NE.b.single.length-1][1] === 0.0455);
+
+  /* WI verified Oct 2026 against WI DOR 2026 Form 1-ES Instructions.
+     The deduction is a sliding scale; until now the app gave everyone the
+     maximum, under-taxing more as grade rose. Every number below is a DOR
+     schedule value typed in as a literal — 528.85 and 2,149.81 and 2,866.09 are
+     DOR's own printed cumulative tax, not something recomputed from STATES. */
+  (() => {
+    // Below the phase-out threshold: full 13,960 plus the $700 exemption.
+    eq('WI single $18,000 — full deduction + $700 exemption',
+       A.stateTaxAnnual('WI', 18000, 'single', 0), (18000 - 13960 - 700) * 0.035, 0.01);
+
+    // Inside the phase-out: 13,960 less 12% of income over 20,120.
+    const sdS50 = 13960 - 0.12 * (50000 - 20120) + 700;
+    eq('WI single $50,000 — deduction phases down 12% over $20,120',
+       A.stateTaxAnnual('WI', 50000, 'single', 0),
+       528.85 + (50000 - sdS50 - 15110) * 0.044, 0.01);
+
+    // Past the zero point (136,453): only the exemption is left. Uses DOR's
+    // printed 2,149.81 at 51,950, so this also pins the lower two brackets.
+    eq('WI single $150,000 — deduction fully phased out, DOR anchor 2,149.81',
+       A.stateTaxAnnual('WI', 150000, 'single', 0),
+       2149.81 + (150000 - 700 - 51950) * 0.053, 0.01);
+
+    // Joint: 25,840 less 19.778% over 29,040; $1,400 exemptions; DOR 2,866.09.
+    const sdJ90 = 25840 - 0.19778 * (90000 - 29040) + 1400;
+    eq('WI joint $90,000 — 19.778% phase-out, DOR anchor 2,866.09',
+       A.stateTaxAnnual('WI', 90000, 'mfj', 0),
+       2866.09 + (90000 - sdJ90 - 69260) * 0.053, 0.01);
+
+    // The regression this replaces: applying the maximum deduction to everyone.
+    const flatMaxOld = 528.85 + 1620.96 + (100000 - 13960 - 51950) * 0.053;
+    ok('WI $100,000 single is taxed MORE than the old flat-maximum model',
+       A.stateTaxAnnual('WI', 100000, 'single', 0) > flatMaxOld + 300);
+
+    // Phase-out must stop at zero, not go negative and *add* taxable income.
+    // At $400,000 the deduction is gone and only the $700 exemption remains;
+    // anchored on DOR's printed 17,030.62 at 332,720. A negative deduction
+    // would push this figure up, so the equality fails if the clamp breaks.
+    eq('WI single $400,000 — deduction floors at zero, DOR anchor 17,030.62',
+       A.stateTaxAnnual('WI', 400000, 'single', 0),
+       17030.62 + (400000 - 700 - 332720) * 0.0765, 0.01);
+  })();
+
+  /* UT — had no test at all until Oct 2026, and was a year stale. SB 60 (2026
+     Ch. 250) set 4.45%, retrospective to 1 Jan; confirmed by Utah Code 59-10-104
+     and Tax Commission Pub 14 (Rev. 4/26). Literals, not STATES lookups. */
+  ok('UT is on the 2026 rate of 4.45%, not 4.5%', A.STATES.UT.flat === 0.0445);
+  eq('UT single $50,000 — 4.45% less the phased taxpayer credit',
+     A.stateTaxAnnual('UT', 50000, 'single', 0),
+     50000 * 0.0445 - (966 - 0.013 * (50000 - 16000)), 0.01);
+  // The taxpayer credit is 6% of the federal standard deduction (no dependants),
+  // so it must move with STD_DED rather than being maintained by hand.
+  ok('UT credit tracks 6% of the federal standard deduction',
+     A.STATES.UT.credit[0] === Math.round(0.06 * STD_DED.single) &&
+     A.STATES.UT.credit[1] === Math.round(0.06 * STD_DED.mfj));
+
+  /* NJ verified Oct 2026. NJ prints each band as "rate minus a constant"; using
+     those printed constants as literals checks every lower bracket at once,
+     because the constant only holds if everything beneath it is right. The
+     fifth band is 5.525% — we held 5.53%, which these would have caught. +1,000
+     / +2,000 adds back the personal exemption that stateTaxAnnual subtracts. */
+  eq('NJ single $50,000 taxable = .05525 x 50,000 - 1,492.50 (NJ schedule)',
+     A.stateTaxAnnual('NJ', 50000+1000, 'single', 0), 0.05525*50000 - 1492.50, 0.01);
+  eq('NJ joint $100,000 taxable = .05525 x 100,000 - 2,775 (NJ schedule)',
+     A.stateTaxAnnual('NJ', 100000+2000, 'mfj', 0), 0.05525*100000 - 2775, 0.01);
+
+  /* RI verified Oct 2026 against Division of Taxation ADV 2025-22. Income is
+     chosen so taxable income lands exactly on DOR's bracket edges, then checked
+     against DOR's own printed base tax. Each call adds back the deduction AND the
+     $5,250-per-person exemption that was missing — so these fail if either one
+     is dropped again. */
+  eq('RI single, taxable exactly $82,050 = DOR base tax $3,076.88',
+     A.stateTaxAnnual('RI', 82050 + 11200 + 5250, 'single', 0), 3076.88, 0.01);
+  eq('RI joint, taxable exactly $186,450 = DOR base tax $8,035.88',
+     A.stateTaxAnnual('RI', 186450 + 22400 + 10500, 'mfj', 0), 8035.88, 0.01);
+  ok('RI carries the 2026 $5,250 personal exemption',
+     A.STATES.RI.persExempt && A.STATES.RI.persExempt[0] === 5250 &&
+     A.STATES.RI.persExempt[1] === 10500);
+
+  /* DE verified Oct 2026: brackets per DOR PIT FAQ, $110-per-person credit per
+     PIT-RES instructions ("MFJ ... no dependents, enter $220"). Bracket sums are
+     written out band by band so the arithmetic is visible, then the credit is
+     taken off — these fail if the credit is dropped again. */
+  eq('DE single $50,000 — brackets less the $110 personal credit',
+     A.stateTaxAnnual('DE', 50000, 'single', 0),
+     (3000*0.022 + 5000*0.039 + 10000*0.048 + 5000*0.052 + (46750-25000)*0.0555) - 110, 0.01);
+  eq('DE joint $90,000 — brackets less the $220 personal credit',
+     A.stateTaxAnnual('DE', 90000, 'mfj', 0),
+     (3000*0.022 + 5000*0.039 + 10000*0.048 + 5000*0.052 + 35000*0.0555 + (83500-60000)*0.066) - 220, 0.01);
+  ok('DE credit is non-refundable — cannot push tax below zero',
+     A.stateTaxAnnual('DE', 4000, 'single', 0) === 0);
+
+  /* DC brackets verified Oct 2026 against OTR's printed base taxes. Income is
+     chosen to land taxable income exactly on each bracket edge. Only the
+     BRACKETS are asserted here — DC's deduction is knowingly unverified (it
+     assumes federal conformity) and these adds-back would need to change with it. */
+  eq('DC taxable exactly $60,000 = OTR base tax $3,500',
+     A.stateTaxAnnual('DC', 60000 + 16100, 'single', 0), 3500, 0.01);
+  eq('DC taxable exactly $250,000 = OTR base tax $19,650',
+     A.stateTaxAnnual('DC', 250000 + 16100, 'single', 0), 19650, 0.01);
+
+  // MA verified Oct 2026: flat 5.00%, $4,400 / $8,800 personal exemption.
+  ok('MA is flat 5.00%', A.STATES.MA.flat === 0.05);
+  eq('MA single $50,000 = 5% of income less the $4,400 exemption',
+     A.stateTaxAnnual('MA', 50000, 'single', 0), (50000 - 4400) * 0.05, 0.01);
   // Maryland must exceed a same-rate state because it adds average local tax.
   ok('MD exceeds a comparable state (local tax applied)',
      A.stateTaxAnnual('MD',60000,'single',0) > A.stateTaxAnnual('NC',60000,'single',0));

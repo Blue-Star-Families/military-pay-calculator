@@ -643,9 +643,31 @@ const STATES = {
   "CT":{name:"Connecticut",cond:true,sd:[0,0],b:{
     single:[[0,.02],[10000,.045],[50000,.055],[100000,.06],[200000,.065],[250000,.069],[500000,.0699]],
     mfj:[[0,.02],[20000,.045],[100000,.055],[200000,.06],[400000,.065],[500000,.069],[1000000,.0699]]}},
-  "DE":{name:"Delaware",sd:[3250,6500],b:{
+  /* DE verified Oct 2026. Rates per Division of Revenue PIT FAQ (updated
+     9 Sep 2026): 2.2%-5.55% under $60,000, 6.6% at $60,000+. Deduction
+     3,250 / 6,500. Both were already correct.
+
+     MISSING until now: the personal credit, $110 per person, taken after tax.
+     PIT-RES instructions (TY2025) give the joint case outright — "married
+     filing jointly and have no dependents, enter $220." Not inflation-indexed
+     and unchanged for years; a 2017 bill text showing $85 never became law.
+     Without it every Delaware resident was over-taxed $110 a year, $220 joint.
+     Dependants add $110 each but the app does not ask for a count.
+     The existing non-refundable `credit` key is exactly this — no engine change. */
+  "DE":{name:"Delaware",sd:[3250,6500],credit:[110,220],b:{
     single:[[0,0],[2000,.022],[5000,.039],[10000,.048],[20000,.052],[25000,.0555],[60000,.066]],
     mfj:[[0,0],[2000,.022],[5000,.039],[10000,.048],[20000,.052],[25000,.0555],[60000,.066]]}},
+  /* DC brackets verified Oct 2026 against OTR "DC Individual and Fiduciary
+     Income Tax Rates" (unchanged for tax years after 2021) and D.C. Code
+     47-1806.03. OTR's printed base taxes match exactly: 400 at 10,000; 2,200 at
+     40,000; 3,500 at 60,000; 19,650 at 250,000.
+
+     The DEDUCTION is NOT verified. 16,100 / 32,200 assumes DC conforms to the
+     federal standard deduction, which it historically has. But a June 2026 CFO
+     revenue presentation refers to pending budget legislation that would
+     decouple DC from a federal provision, and no OTR income-tax source for 2026
+     was reachable. Left on federal conformity deliberately rather than guessed;
+     if DC decoupled from the OBBBA increase, the 2025 figure would apply. */
   "DC":{name:"Dist. of Columbia",sd:[16100,32200],b:{
     single:[[0,.04],[10000,.06],[40000,.065],[60000,.085],[250000,.0925],[500000,.0975],[1000000,.1075]],
     mfj:[[0,.04],[10000,.06],[40000,.065],[60000,.085],[250000,.0925],[500000,.0975],[1000000,.1075]]}},
@@ -703,6 +725,11 @@ const STATES = {
   "MD":{name:"Maryland",sd:[3350,6700],local:.032,b:{
     single:[[0,.02],[1000,.03],[2000,.04],[3000,.0475],[100000,.05],[125000,.0525],[150000,.055],[250000,.0575],[500000,.0625],[1000000,.065]],
     mfj:[[0,.02],[1000,.03],[2000,.04],[3000,.0475],[150000,.05],[175000,.0525],[225000,.055],[300000,.0575],[600000,.0625],[1200000,.065]]}},
+  /* MA verified Oct 2026: flat 5.00% (DOR "Tax Rates"; Circular M withholding
+     at 5.0% effective 1 Jan 2026). sd is the personal exemption, 4,400 /
+     8,800 — Massachusetts has no standard deduction. HoH is 6,800 but
+     collapses to single here. The 4% surtax starts at $1,107,750, far above
+     any basic pay. A ballot initiative would cut the rate from 2029; not law. */
   "MA":{name:"Massachusetts",flat:.05,sd:[4400,8800]},
   "MI":{name:"Michigan",exemptDefault:true,flat:.0425,sd:[5800,11600]},
   "MN":{name:"Minnesota",exemptDefault:true,flat:.068,sd:[14950,29900]},
@@ -720,14 +747,51 @@ const STATES = {
     single:[[0,0],[10000,.04]],mfj:[[0,0],[10000,.04]]}},
   "MO":{name:"Missouri",exemptDefault:true,flat:.048,sd:[16100,32200]},
   "MT":{name:"Montana",exemptDefault:true,flat:.059,sd:[16100,32200]},
+  /* NE verified Oct 2026 against the NDOR 2026 Nebraska Tax Table (draft
+     8/17/2026). Nebraska has four statutory brackets, but in 2026 the third
+     and fourth share the 4.55% rate, so this three-bracket form is exactly
+     equivalent. Checked at four independent points, all to the dollar:
+       single worksheet at 79,860  NDOR 3,333  engine 3,332.76
+       joint  worksheet at 79,860  NDOR 3,032  engine 3,031.89
+       single row 4,260-4,360      NDOR   108  engine   107.92
+       joint  row 8,260-8,360      NDOR   205  engine   205.06
+     The joint anchor only reaches 3,032 if brackets 3 and 4 share a rate,
+     which is what settles the three-vs-four question.
+
+     TRAP: NDOR's Form 1040N-ES dated Sept 2026 lists a 9,100 / 18,200
+     deduction and a 3.99% top rate. That form is for tax year *2027*. A search
+     summary presented those as 2026 figures; applying them would have put next
+     year's law into this year's tool. For January 2027: top rate 3.99%,
+     thresholds 4,270 / 25,570 / 41,200 single, deduction 9,100 / 18,200.
+
+     Deduction 8,850 / 17,700 is consistent with Nebraska's indexing ladder
+     (8,600 in 2025, 9,100 in 2027) and with secondary sources, but has not been
+     read off an NDOR 2026 page. */
   "NE":{name:"Nebraska",sd:[8850,17700],b:{single:[[0,.0246],[4130,.0351],[24760,.0455]],mfj:[[0,.0246],[8250,.0351],[49530,.0455]]}},
   "NV":{name:"Nevada",none:true},
   "NH":{name:"New Hampshire",none:true},
+  /* NJ verified Oct 2026 (NJ Division of Taxation rate schedules, unchanged
+     since 2020; exemptions per "Income Tax – Exemptions", updated 12/03/25).
+     Brackets are not inflation-indexed — A4427 would index them but is not law.
+
+     One constant was wrong: the fifth band is 5.525% (.05525), and we held
+     5.53%. NJ publishes the single band as "x .05525 minus $1,492.50", and our
+     lower brackets total 717.50 at $40,000; .05525 x 40,000 - 1,492.50 = 717.50
+     exactly. With .0553 the constant would need to be 1,494.50, which NJ does
+     not print. Joint is the same rate ("minus $2,775"). Worth at most $1.75 a
+     year single, $3.50 joint — trivial money, but simply the wrong number.
+
+     sd is the $1,000 personal exemption (plus $1,000 for a spouse filing
+     jointly). The $6,000 veteran exemption is for those honorably discharged,
+     not serving members, so it correctly does not apply. */
   "NJ":{name:"New Jersey",sd:[1000,2000],b:{
-    single:[[0,.014],[20000,.0175],[35000,.035],[40000,.0553],[75000,.0637],[500000,.0897],[1000000,.1075]],
-    mfj:[[0,.014],[20000,.0175],[50000,.0245],[70000,.035],[80000,.0553],[150000,.0637],[500000,.0897],[1000000,.1075]]}},
+    single:[[0,.014],[20000,.0175],[35000,.035],[40000,.05525],[75000,.0637],[500000,.0897],[1000000,.1075]],
+    mfj:[[0,.014],[20000,.0175],[50000,.0245],[70000,.035],[80000,.05525],[150000,.0637],[500000,.0897],[1000000,.1075]]}},
   "NM":{name:"New Mexico",exemptDefault:true,flat:.049,sd:[16100,32200]},
   "NY":{name:"New York",cond:true,flat:.055,sd:[8000,16050]},
+  /* NC verified Oct 2026: flat 3.99% for 2026 (S.L. 2023-134; was 4.25% in
+     2025), deduction 12,750 / 25,500 (G.S. 105-153.5). HoH is 19,125 by statute
+     but collapses to single here — see NOTES. 2027 is projected at 3.49%. */
   "NC":{name:"North Carolina",flat:.0399,sd:[12750,25500]},
   "ND":{name:"North Dakota",exemptDefault:true,flat:.025,sd:[16100,32200]},
   "OH":{name:"Ohio",cond:true,sd:[0,0],b:{
@@ -737,7 +801,21 @@ const STATES = {
     single:[[0,.0475],[4550,.0675],[11400,.0875],[125000,.099]],
     mfj:[[0,.0475],[9100,.0675],[22800,.0875],[250000,.099]]}},
   "PA":{name:"Pennsylvania",cond:true,flat:.0307,sd:[0,0]},
-  "RI":{name:"Rhode Island",sd:[11200,22400],b:{
+  /* RI verified Oct 2026 against RI Division of Taxation ADV 2025-22
+     (Inflation-adjusted amounts for Tax Year 2026, 3 Nov 2025).
+     Brackets and deduction were correct. Brackets reproduce DOR's printed base
+     tax exactly: 82,050 x .0375 = 3,076.88; + 104,400 x .0475 = 8,035.88.
+
+     MISSING until now: the personal exemption, $5,250 per person for 2026, on
+     top of the deduction. Without it we over-taxed every RI resident by about
+     $16 a month single, $33 joint (5,250 or 10,500 at 3.75%). Dependants are
+     another $5,250 each but the app does not ask for a count, so they are not
+     included. Uses the same persExempt key as Wisconsin.
+
+     The deduction and exemptions phase out between $261,000 and $290,800 of
+     modified AGI — above any basic pay, so not modelled. A high-income surtax
+     starts in 2027 on top of 5.99%; irrelevant to 2026 and to military pay. */
+  "RI":{name:"Rhode Island",sd:[11200,22400],persExempt:[5250,10500],b:{
     single:[[0,.0375],[82050,.0475],[186450,.0599]],
     mfj:[[0,.0375],[82050,.0475],[186450,.0599]]}},
   /* SC 2026: Act 110, signed March 30, 2026, replaced the three-bracket table
@@ -760,7 +838,22 @@ const STATES = {
   "SD":{name:"South Dakota",none:true},
   "TN":{name:"Tennessee",none:true},
   "TX":{name:"Texas",none:true},
-  "UT":{name:"Utah",flat:.045,sd:[0,0],credit:[966,1932],creditPhase:{rate:.013,threshold:[16000,32000]}},
+  /* UT 2026: SB 60 (2026 General Session, Chapter 250) cut the rate from 4.5%
+     to 4.45%, retrospective to 1 January 2026. We held 4.5%. Two primary
+     sources agree: Utah Code 59-10-104 as amended, and the Tax Commission's
+     Publication 14 (Rev. 4/26), whose withholding schedules multiply by .0445.
+     Utah TAXES military pay — an earlier note here wrongly filed it alongside
+     Montana as exempt and low-impact. It is neither. Hill AFB, Dugway.
+
+     A $1M-and-over 5.15% tier appeared in a substitute bill; whether it survived
+     is unconfirmed and irrelevant here, since no basic pay reaches it.
+
+     The taxpayer credit is 6% of the federal standard deduction for a filer
+     without dependants: .06 x 16,100 = 966 and .06 x 32,200 = 1,932, which is
+     why these track STD_DED. The 1.3% phase-out rate matches Pub 14. The
+     phase-out THRESHOLDS (16,000 / 32,000) are indexed and have NOT been
+     confirmed for 2026 — worth a few dollars a year at most. */
+  "UT":{name:"Utah",flat:.0445,sd:[0,0],credit:[966,1932],creditPhase:{rate:.013,threshold:[16000,32000]}},
   "VT":{name:"Vermont",cond:true,sd:[7650,15300],b:{
     single:[[0,.0335],[49400,.066],[119700,.076],[249700,.0875]],
     mfj:[[0,.0335],[82500,.066],[199450,.076],[304000,.0875]]}},
@@ -784,7 +877,29 @@ const STATES = {
   "WV":{name:"West Virginia",sd:[0,0],b:{
     single:[[0,.0211],[10000,.0281],[25000,.0316],[40000,.0422],[60000,.0458]],
     mfj:[[0,.0211],[10000,.0281],[25000,.0316],[40000,.0422],[60000,.0458]]}},
-  "WI":{name:"Wisconsin",sd:[13960,25840],b:{
+  /* WI verified Oct 2026 against WI DOR 2026 Form 1-ES Instructions (D-101A,
+     R. 1-26). Brackets match exactly, including DOR's printed cumulative tax:
+     single 2,149.81 at 51,950 and 17,030.62 at 332,720; joint 2,866.09 at
+     69,260. Single thresholds are 75% of joint by statute.
+
+     The DEDUCTION was wrong. Wisconsin's is a sliding scale, and we gave
+     everyone the maximum:
+       single  13,960 less 12%      of WI income over 20,120 (zero at 136,453)
+       joint   25,840 less 19.778%  of WI income over 29,040 (zero at 159,690)
+     That under-taxed Wisconsin residents, more so as grade rose — about $10 a
+     month for an E-5, about $39 for an O-4. Opposite direction to most of the
+     other state errors, which over-taxed.
+
+     Also missing: the $700 personal exemption (yourself, plus spouse on a joint
+     return), which DOR takes on the same line as the deduction. Dependants are
+     another $700 each but the app does not ask for a count, so they are not
+     included — a small understatement of the deduction for families.
+
+     HoH has its own schedule (18,030 less 22.515% up to 58,827, then the single
+     schedule) but collapses to single here like everywhere else. */
+  "WI":{name:"Wisconsin",sd:[13960,25840],
+    sdPhase:{start:[20120,29040],rate:[0.12,0.19778]},
+    persExempt:[700,1400],b:{
     single:[[0,.035],[15110,.044],[51950,.053],[332720,.0765]],
     mfj:[[0,.035],[20150,.044],[69260,.053],[443630,.0765]]}},
   "WY":{name:"Wyoming",none:true}
@@ -794,7 +909,16 @@ function stateTaxAnnual(code, annualTaxable, filing, fedAnnual){
   const s=STATES[code]; if(!s || s.none) return 0;
   if(!(annualTaxable>0)) return 0;
   const fi=(filing==="mfj")?1:0;
-  const sd=(s.sd?s.sd[fi]:0);
+  let sd=(s.sd?s.sd[fi]:0);
+  /* Sliding-scale standard deduction (Wisconsin): the maximum shrinks by a
+     fixed share of income above a threshold and bottoms out at zero.
+     annualTaxable is the member's own taxable pay, standing in for the state's
+     measure of income — exact for a single-income household. */
+  if(s.sdPhase){
+    sd=Math.max(0, sd - s.sdPhase.rate[fi]*Math.max(0, annualTaxable - s.sdPhase.start[fi]));
+  }
+  // Personal exemptions taken on the same line as the deduction (Wisconsin).
+  if(s.persExempt) sd += s.persExempt[fi];
   const fedDed=(s.fedDeduct)?Math.max(0, fedAnnual||0):0;   // e.g., Alabama: deduct federal income tax paid
   const inc=Math.max(0, annualTaxable - sd - fedDed);
   let tax=0;

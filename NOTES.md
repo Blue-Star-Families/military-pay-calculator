@@ -10,10 +10,15 @@ Internal reference for updating and maintaining the Military Take-Home Pay Estim
 | `bah-data.js` | 2026 BAH rate tables (338 housing areas). Loaded by `index.html` via `<script src>`. Must sit in the same folder. |
 | `zip-data.js` | ZIP-to-housing-area map, packed. Also loaded via `<script src>` from the same folder. |
 | `build-zip-data.js` | Regenerates `zip-data.js` from the DoD `sorted_zipmha` file. |
-| `test.js` | Dependency-free calculation-engine test suite (198 checks). |
-| `test-dom.js` | Browser-DOM integration test suite (62 checks). |
+| `test.js` | Dependency-free calculation-engine test suite. |
+| `test-dom.js` | Browser-DOM integration test suite. |
 | `package.json` / `package-lock.json` | Reproducible Node.js test scripts and pinned development dependencies. |
-| `.github/workflows/test.yml` | Runs all 260 automated checks on pushes and pull requests. |
+| `.github/workflows/test.yml` | Runs both suites on pushes and pull requests. |
+
+Check counts are deliberately not written here: each suite prints its own
+`PASS n/n` line, and hardcoded counts in this file went stale several times
+over. **After copying files in, confirm the count moved** — an unchanged count
+after adding tests means the run tested old files.
 | `README.md` | Public overview. |
 | `LICENSE` | MIT. |
 | `NOTES.md` | This file. |
@@ -27,8 +32,9 @@ Both `index.html` and `bah-data.js` must be deployed together or BAH auto-fill b
 - **BAH** — DoD DTMO `BAH-ASCII-2026` files, parsed into `bah-data.js`.
 - **Federal brackets & standard deduction** — IRS Rev. Proc. 2025-32 (`BRACKETS`, `STD_DED`).
 - **FICA** — Social Security wage base $184,500 (`SS_WAGE_BASE`); Additional Medicare 0.9% over $200,000.
-- **State income tax** — 2026 brackets & standard deductions (Tax Foundation) in the `STATES` object. Active-duty treatment per MyAirForceBenefits "Which states tax my active-duty pay." Each state is one of: `none` (no income tax), `exemptDefault` (fully exempts active-duty pay — box pre-checked), `cond` (taxed if stationed in-state, exempt if stationed elsewhere — taxed by default, note prompts the user to check the exempt box), or plain taxed. Fully-exempt set: AZ, AR, IL, IN, IA, KY, MI, MN, MO, MT, NM, ND, OK. Conditional set: CA, CT, ID, ME, NY, OH, OR, PA, VT. States that only exempt combat/National Guard pay (e.g., AL, KS, LA, NE, NJ, WV, WI) are treated as taxed. State-specific mechanisms the engine models: `fedDeduct` (Alabama deducts federal income tax paid — `stateTaxAnnual` receives the member's annual federal tax), and `credit` / `creditPhase` (taxpayer credits subtracted after tax, e.g., Utah's phasing-out credit and Oregon's exemption credit). Graduated brackets are used for CT, DC, KS, NE, NJ, WI (previously flat approximations).
-- **Executive Schedule pay caps** — Level II $18,808.20 (O-7–O-10), Level V $15,258.30 (O-6) (`PAY_CAP`).
+- **State income tax** — 2026 brackets & standard deductions in the `STATES` object. Originally compiled from the Tax Foundation; **all 20 jurisdictions that tax military pay were re-verified against their own revenue departments in October 2026**, and 9 were wrong (see "Final tally" below). Each verified entry carries its source in a comment. The other 31 (no tax, exempt, or conditional) were not individually re-verified. Active-duty treatment per MyAirForceBenefits "Which states tax my active-duty pay." Each state is one of: `none` (no income tax), `exemptDefault` (fully exempts active-duty pay — box pre-checked), `cond` (taxed if stationed in-state, exempt if stationed elsewhere — taxed by default, note prompts the user to check the exempt box), or plain taxed. Fully-exempt set: AZ, AR, IL, IN, IA, KY, MI, MN, MO, MT, NM, ND, OK. Conditional set: CA, CT, ID, ME, NY, OH, OR, PA, VT. States that only exempt combat/National Guard pay (e.g., AL, KS, LA, NE, NJ, WV, WI) are treated as taxed. State-specific mechanisms the engine models: `fedDeduct` (Alabama deducts federal income tax paid — `stateTaxAnnual` receives the member's annual federal tax), and `credit` / `creditPhase` (taxpayer credits subtracted after tax, e.g., Utah's phasing-out credit, Oregon's exemption credit, Delaware's $110 personal credit), `sdPhase` (a standard deduction that shrinks by a share of income above a threshold — Wisconsin; the intended mechanism for Alabama once its chart is known), and `persExempt` (per-person exemptions taken alongside the deduction — Wisconsin $700, Rhode Island $5,250). All four are opt-in per state; a state without the key is unaffected. Graduated brackets are used for CT, DC, KS, NE, NJ, WI (previously flat approximations).
+- **Executive Schedule pay caps** — OPM Salary Table 2026-EX: Level II **$228,000/yr** (O-7–O-10), Level V **$184,900/yr** (O-6). `PAY_CAP` is *derived* as annual ÷ 12, so only the two annual figures (`ES_LEVEL_II`, `ES_LEVEL_V`) are ever edited.
+  > ⚠️ An earlier version of this line read "Level II $18,808.20, Level V $15,258.30". Those were the **2025** monthly figures — the exact stale values that clipped correct 2026 pay and were reported by a reviewer in September 2026. Do not copy them back.
 
 ## Updating for a new year (e.g., 2027)
 
@@ -41,8 +47,8 @@ Both `index.html` and `bah-data.js` must be deployed together or BAH auto-fill b
 2. **Basic pay:** replace the `PAY` object with the new year's monthly table.
 3. **BAS:** update `BAS_ENL` / `BAS_OFF`.
 4. **Federal:** update `BRACKETS`, `STD_DED`, and `SS_WAGE_BASE`.
-5. **Pay caps:** update `PAY_CAP` (Executive Schedule Levels II and V).
-6. **State tax:** spot-check the `STATES` object for rate/bracket changes (several states adjust rates annually).
+5. **Pay caps:** update the two **annual** figures `ES_LEVEL_II` and `ES_LEVEL_V` from the new OPM Salary Table EX. `PAY_CAP` derives from them — do not edit it directly.
+6. **State tax:** **not a spot-check.** Re-read every one of the 20 military-pay-taxing jurisdictions against its own revenue department (each entry's comment names the source used last time). In October 2026, 9 of 20 were wrong — five of them because a 2025 or 2026 bill changed the rate, which a spot-check would not catch. Watch for the date trap: states publish next year's estimated-tax forms in September, so a form dated in the current year may carry next year's figures.
 7. Update the year labels in the header, badge, and disclaimer text.
 
 ## Calculation model (assumptions)
@@ -388,8 +394,125 @@ the 2025 rate of 4.4% while its General Information page gives 2026 as 4%. When
 two pages of the same revenue department disagree, prefer the one that is
 explicitly year-labelled, and record which you used.
 
-**9 of the 20 remain unchecked**: DE DC MA NE NC RI UT WI (and AL's
-deduction). Four of the nine examined so far were wrong outright, one more was
+### Round four: NC, NE, WI (October 2026)
+
+| State | Verdict |
+| --- | --- |
+| NC | **Correct.** 3.99% (S.L. 2023-134), deduction 12,750 / 25,500 (G.S. 105-153.5). 2027 projected 3.49%. |
+| NE | **Correct**, verified against NDOR's own 2026 Tax Table at four points, all to the dollar (see below). |
+| WI | **Brackets correct to the cent; deduction wrong.** Fixed — engine change, see below. |
+
+**Nebraska — the date trap.** NDOR's Form 1040N-ES dated September 2026 shows a
+9,100 / 18,200 deduction and a 3.99% top rate. That form is for tax year
+**2027**. A search summary presented those as 2026 figures. Applying them would
+have put next year's law into this year's tool — a "fix" that made it wrong.
+The 2026 Tax Table settled it instead:
+
+| Point | NDOR | Engine |
+| --- | --- | --- |
+| Single worksheet at 79,860 | 3,333 | 3,332.76 |
+| Joint worksheet at 79,860 | 3,032 | 3,031.89 |
+| Single row 4,260–4,360 | 108 | 107.92 |
+| Joint row 8,260–8,360 | 205 | 205.06 |
+
+Nebraska has four statutory brackets, but in 2026 the third and fourth share
+4.55%, so our three-bracket form is equivalent — the joint anchor lands on 3,032
+only if that is true. Tests assert NDOR's printed figures and guard against the
+2027 values. **For January 2027:** top rate 3.99%, single thresholds
+4,270 / 25,570 / 41,200, deduction 9,100 / 18,200 — all from that same form.
+
+**Wisconsin — a modelling error, not a stale number.** Brackets match DOR's
+printed cumulative tax exactly (2,149.81 at 51,950; 17,030.62 at 332,720;
+2,866.09 joint at 69,260). But Wisconsin's standard deduction is a **sliding
+scale**:
+
+- single: 13,960 less 12% of WI income over 20,120, zero at 136,453
+- joint: 25,840 less 19.778% over 29,040, zero at 159,690
+
+We gave everyone the maximum, which **under**-taxed Wisconsin residents — about
+$10/month for an E-5, about $39/month for an O-4. Most other state errors
+over-taxed; this one went the other way, and grew with rank. We also omitted the
+$700 personal exemption DOR takes on the same line.
+
+Fixed by adding two generic, opt-in keys to the state engine rather than a
+Wisconsin special case: `sdPhase` (threshold + rate per filing status) and
+`persExempt`. Any future sliding-scale state can use them. Dependant exemptions
+($700 each) are still not counted, because the app does not ask for a count.
+
+**One more to know about Alabama:** it also uses a sliding-scale deduction.
+`sdPhase` is now the mechanism to model it, once someone has Alabama's actual
+chart.
+
+### Round five: UT (October 2026)
+
+**Wrong, and it had no test at all.** SB 60 (2026 General Session, Chapter 250)
+cut Utah's rate from 4.5% to **4.45%**, retrospective to 1 January 2026. Two
+primary sources agree: Utah Code 59-10-104 as amended, and the Tax Commission's
+Publication 14 (Rev. 4/26), whose withholding schedules multiply by .0445.
+
+The taxpayer credit checks out by construction: it is 6% of the federal
+standard deduction for a filer without dependants, so .06 × 16,100 = 966 and
+.06 × 32,200 = 1,932. A test now asserts it tracks `STD_DED`. The 1.3% phase-out
+rate matches Pub 14; the phase-out **thresholds** (16,000 / 32,000) are indexed
+and unconfirmed for 2026 — a few dollars a year at most.
+
+### Round six: NJ, RI, DE, MA, DC — audit complete (October 2026)
+
+| State | Verdict |
+| --- | --- |
+| NJ | **Wrong constant, fixed.** Fifth band is 5.525%; we held 5.53%. Proof: NJ prints the band as "×.05525 minus $1,492.50", our lower brackets total 717.50 at $40,000, and .05525 × 40,000 − 1,492.50 = 717.50 exactly. With .0553 the constant would have to be 1,494.50, which NJ does not print. Trivial money (≤ $3.50/yr), wrong number. |
+| RI | **Missing exemption, fixed.** Brackets and deduction were right (base taxes 3,076.88 and 8,035.88 reproduce exactly), but RI also allows **$5,250 per person** for 2026 (ADV 2025-22) and we carried none. Over-taxed ~$16/month single, ~$33 joint. Uses `persExempt`. |
+| DE | **Missing credit, fixed.** Brackets and deduction right; the **$110-per-person** personal credit was absent (PIT-RES: "MFJ … no dependents, enter $220"). A 2017 bill text showing $85 never became law. Uses the existing `credit` key — no engine change. |
+| MA | **Correct.** 5.00% flat; $4,400 / $8,800 exemption. |
+| DC | **Brackets correct** (OTR base taxes 400 / 2,200 / 3,500 / 19,650 all exact). **Deduction unverified** — assumes federal conformity, and a June 2026 CFO presentation mentions pending decoupling legislation. Left alone deliberately. |
+
+## Final tally — all 20 military-pay-taxing jurisdictions
+
+| Outcome | Count | States |
+| --- | --- | --- |
+| **Wrong, now fixed** | **9** | DE, GA, HI, NJ, RI, SC, UT, WV, WI |
+| Correct as shipped | 7 | CO, KS, MA, MS, NC, NE, VA |
+| Correct but mislabelled, fixed | 1 | MD (local rate called "avg.", is the maximum) |
+| Partially verified / known limit | 3 | AL (deduction chart unknown), DC (deduction assumes conformity), LA (deduction CPI-indexed, unpublished) |
+
+**Nine of twenty had a real error — 45%.** Every one passed the existing suite,
+because the "golden values" recomputed from the same constants the app held.
+
+What the nine had in common, which is the useful part:
+
+- **Year-stale after a legislated change** — GA, SC, WV, HI, UT. All five
+  changed for tax year 2026 by a 2025 or 2026 bill. A yearly check against each
+  revenue department would have caught all of them.
+- **A mechanism the engine did not have** — WI (sliding-scale deduction), RI
+  (per-person exemption), DE (per-person credit). These were not stale; they
+  were never modelled. Two new generic keys, `sdPhase` and `persExempt`, now
+  cover them, and Alabama can use `sdPhase` once its chart is known.
+- **A transcription slip** — NJ, 5.53% for 5.525%.
+
+Two process failures of my own, recorded so they are not repeated:
+
+- New Jersey **fell off the running "remaining" list** for two rounds and would
+  never have been checked. Derive the remaining set from the master list.
+- Utah was briefly **misfiled as exempt-by-default** in these notes. It is not.
+
+**Still knowingly imperfect:** AL's deduction, DC's deduction, LA's indexed
+deduction, HI's brackets, UT's credit phase-out thresholds, and head-of-household
+collapsing to single in every state. Dependant exemptions are not counted in
+WI, RI or DE because the app does not ask for a count. Each is documented in its
+`STATES` entry.
+
+**For the January 2027 update:** NE (3.99%, deduction 9,100 / 18,200), MS (3.75%),
+NC (projected 3.49%), RI (high-income surtax begins), and re-read every one of
+the 20 against its revenue department — not against this file.
+
+> **New Jersey fell off this list** two rounds ago: the "remaining" lists in
+> Rounds two and three omitted it, so it would never have been audited. Found
+> by recounting the 20 against the 15 examined rather than trusting the running
+> list. **Derive the remaining set from the master list each round; do not
+> carry it forward by hand.**
+
+Running tally across the 15 examined: **six wrong** (GA, SC, WV, HI, WI, UT),
+one mislabelled (MD), one unresolved (AL's deduction), seven correct. Four of the nine examined so far were wrong outright, one more was
 mislabelled, and one is unresolved. That is not a sample that licenses assuming
 the rest are fine.
 
@@ -399,12 +522,17 @@ NC 3.99%, MS 4% over 10,000, NE top 4.55%. CO and LA did not appear on any 2026
 change list, which suggests their rates are unchanged, but the *values* in our
 table have still never been read off a state source.
 
-Two more known-stale entries, both low impact because the state exempts military
-pay by default, so they are recorded rather than fixed:
+One known-stale entry left alone because it is low impact — Montana exempts
+military pay by default:
 
 - **MT** holds 5.9%; the 2026 top rate is 5.65%.
-- **UT** holds 4.5%; a 2026 cut to 4.45% is reported but I could not confirm it
-  against the Utah State Tax Commission, so it is left alone deliberately.
+
+> **Correction (Oct 2026):** an earlier version of this note also filed **Utah**
+> here as exempt-by-default and low impact. That was wrong — Utah *taxes*
+> military pay and was in the list of 20 all along. It has since been verified
+> and fixed (4.5% → 4.45%); see Round five. Recorded rather than silently
+> edited, because a note that confidently misclassifies a state is exactly how
+> a real error gets waved through.
 
 **Head of household is collapsed into single in every state.** `stateTaxAnnual`
 does `filing==="mfj" ? 1 : 0`. Mostly harmless, since many states have no
@@ -424,7 +552,35 @@ verification, ordered by what bites first.
 **Needs a person, not a code change**
 
 1. ~~Default branch wrong on both repos.~~ **Done** — both now point at `main`.
-2. **Custom domain — the question changed.** Marketing now intends the tool to
+2. **Embed in the content hub — DECIDED 8 Oct 2026** (Brittany: "probably #2").
+   Sarah Schafer (Website Manager) is building the hub side; Josh Petit owns SEO.
+   Waiting only on the **final hub URL**. What has to happen, in order:
+     - **The github.io page must stay public.** The iframe loads from it on every
+       visit. Brittany initially asked for it to be "inaccessible to the public"
+       so the hub ranks — that would break the embed (and GitHub Pages cannot be
+       private on a free org plan anyway). The real goal is met by `noindex`.
+     - **At hub launch, change two lines in `index.html`:** line ~8
+       `<link rel="canonical">` → the hub URL; line ~10 `robots` → `noindex,follow`.
+       Do these together and *at* launch — not before, or there is a window
+       where nothing ranks.
+     - **Share links** build from `location.origin + location.pathname`
+       (`collectState` area, ~line 1448). Inside an iframe that is the github.io
+       URL, so shared links would bypass the hub. Needs a configurable base URL.
+     - **Height.** The page is ~6,000px tall on a phone and grows in compare
+       mode. A fixed-height iframe will clip or gap. Needs a small `postMessage`
+       height broadcast here plus a few lines on the hub page.
+     - **Design and copy changes happen in this repo**, not the CMS: the hub's
+       CSS cannot reach into a cross-origin iframe. Brand styles and copy edits
+       come to us and go through the tests like any other change.
+     - **SEO reality:** Google mostly does not credit iframe content to the host
+       page. The hub post needs its own written content to rank.
+   `DNS-REQUEST.md` is now obsolete — the subdomain route was not chosen.
+   Latent nit found while checking this: the feedback button's no-`replaceWith`
+   fallback calls `window.open(...,"noopener")`, which returns null by spec, so
+   it also navigates the current page. Only reachable on pre-2017 browsers;
+   modern ones take the anchor path. Not worth a change on its own.
+
+   *(Superseded text follows.)* Marketing originally intended the tool to
    live either on a simple domain of its own *or* as a post in the finance and
    benefits content hub (URL still under construction, Josh Peitt owns it).
    Those are different builds, so `DNS-REQUEST.md` is **on hold**, not ready to
@@ -439,10 +595,9 @@ verification, ordered by what bites first.
 
 **Unfinished verification**
 
-4. **Special-pay defaults not yet checked against a primary source:** ACIP 1000,
-   diving 340, hardship duty 150, SDAP 450, FSA 250, HFP/IDP 225. Two of the
-   five that *were* checked turned out wrong, so treat the remaining six as
-   suspect rather than fine. DoD FMR 7000.14-R Volume 7A is the source.
+4. ~~Special-pay defaults not yet checked.~~ **Done** (October 2026) — all
+   eleven verified against DoD FMR Volume 7A; SDAP was wrong (450 → 750) and is
+   fixed. See "Special-pay defaults audit" above.
 5. ~~Live special-pay defaults unconfirmed.~~ **Done** — fetched from the live
    page October 7: sea pay 750, submarine 950, both serving correctly.
 6. **One LES, not many.** Every reconciliation claim in this file rests on a
@@ -454,12 +609,16 @@ verification, ordered by what bites first.
 
 **Open design questions** (see the LES reconciliation section above for detail)
 
-7. Pre-tax vs post-tax "Other monthly deductions".
-8. The basic pay table stores whole dollars where DFAS pays cents.
+8. Pre-tax vs post-tax "Other monthly deductions".
+9. The basic pay table stores whole dollars where DFAS pays cents.
+10. Head of household collapses to single in every state (see the state audit).
 
-**The habit worth keeping.** Four of the bugs fixed on the final day were found
-by a reviewer with a real pay statement or by reading a primary source — none by
-the 415 automated checks, which passed throughout. The suite protects against
+**The habit worth keeping.** Every substantive bug fixed in September and
+October 2026 — the pay cap, three special-pay defaults, nine state tax entries —
+was found by a reviewer with a real pay statement or by reading a primary
+source. **None was found by the automated suite, which passed throughout.** The
+suite protects against regressions. It cannot tell you a number was wrong the
+day it was typed in. The suite protects against
 regressions. It cannot tell you a number was wrong the day it was typed in.
 
 ## Known limitations (intentional)
@@ -538,14 +697,14 @@ email addresses" setting off — question 3 asks for it explicitly, with context
 ## Accessibility & print
 
 - Results and the comparison delta use `aria-live="polite"` so screen readers announce recalculated values.
-- Every static control has a `<label for>`; the 12 generated special-pay amount inputs carry `aria-label`.
+- Every static control has a `<label for>`; every generated special-pay amount input carries an `aria-label` — including the second, per-scenario box on the COLA rows. The DOM suite derives the expected count from `SPECIALS` rather than hardcoding it.
 - Print stylesheet: hides action buttons, forces exact brand color, prevents cards from splitting across pages, and appends link URLs after anchors.
 
 ## Running the tests
 
 ```
-npm ci                # install the exact locked test dependency
-npm test              # 198 engine + 62 DOM integration checks
+npm ci                # install the exact locked test dependency (once per clone)
+npm test              # engine suite + DOM integration suite
 ```
 
 `test-dom.js` parses the real `index.html` in a real DOM, executes the real
@@ -557,7 +716,7 @@ command with instructions to install the locked dependencies using `npm ci`.
 **Not covered by either suite: visual layout.** jsdom has no renderer, so how the
 page *looks* — especially on a phone — still needs a human with a browser.
 
-The suites contain 260 checks covering the golden case, 2026 constants, the pay
+The suites cover the golden case, 2026 constants, the pay
 table, BAH data integrity and lookup, FICA/combat-zone/TSP behaviour, all 51
 state jurisdictions, special pays, input hardening, a 1,071-combination sweep,
 XSS escaping, share-link round-trip, corrupted-data resilience, accessibility,
