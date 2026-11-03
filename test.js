@@ -717,6 +717,87 @@ G('State tax: hand-computed golden values');
   eq('DC taxable exactly $250,000 = OTR base tax $19,650',
      A.stateTaxAnnual('DC', 250000 + 16100, 'single', 0), 19650, 0.01);
 
+  /* CA verified Nov 2026 against FTB "2026 Indexing" (13 Oct 2026). Income
+     lands taxable income exactly on a Schedule X / Y edge, so the expected
+     value is FTB's own printed base tax, less the 2026 personal exemption
+     credit — these fail if the brackets go stale or the credit is dropped. */
+  eq('CA single, taxable exactly $75,197 = FTB base $3,310.88 less $158 credit',
+     A.stateTaxAnnual('CA', 75197 + 5900, 'single', 0), 3310.88 - 158, 0.01);
+  eq('CA joint, taxable exactly $150,394 = FTB base $6,621.76 less $316 credit',
+     A.stateTaxAnnual('CA', 150394 + 11800, 'mfj', 0), 6621.76 - 316, 0.01);
+
+  /* NY verified Nov 2026 against IT-2105-I (2026). Below $107,650 NYAGI the
+     rate table applies as printed ($1 tolerance: NY rounds its cumulative
+     amounts to the dollar). Above it, the worksheet recaptures the lower
+     brackets: line 3 = taxable x 5.40%, line 4 = table tax, the difference is
+     phased in by (NYAGI - 107,650) / 50,000. */
+  eq('NY single, taxable exactly $80,650 = IT-2105-I base $4,191',
+     A.stateTaxAnnual('NY', 80650 + 8000, 'single', 0), 4191, 1);
+  eq('NY joint, taxable $161,550 with NYAGI over $157,650 = flat 5.40% (fully recaptured)',
+     A.stateTaxAnnual('NY', 161550 + 16050, 'mfj', 0), 161550 * 0.054, 0.01);
+  (() => {
+    const agi = 140000, ti = agi - 16050;
+    const table = 1174 + (ti - 27900) * 0.054;
+    const worksheet = table + (ti * 0.054 - table) * ((agi - 107650) / 50000);
+    eq('NY joint, NYAGI $140,000 — partly recaptured per the worksheet',
+       A.stateTaxAnnual('NY', agi, 'mfj', 0), worksheet, 1);
+  })();
+  ok('NY is graduated, not the old flat 5.5%', !A.STATES.NY.flat && A.STATES.NY.b);
+
+  /* CT verified Nov 2026 against DRS TPG-211 (2026, "unchanged from 2025"),
+     Tables A-E. Each case is worked by hand from the printed tables:
+     exemption (A) -> bracket tax (B) + add-back (C) + recapture (D), then
+     reduced by the personal credit decimal (E). */
+  eq('CT single $35,000 — exemption 10,000 (A), $875 tax, less 10% credit (E)',
+     A.stateTaxAnnual('CT', 35000, 'single', 0), (200 + 0.045*15000) * 0.90, 0.01);
+  eq('CT single $50,000 — no exemption left, $2,000 tax, less 10% credit',
+     A.stateTaxAnnual('CT', 50000, 'single', 0), 2000 * 0.90, 0.01);
+  eq('CT joint $90,000 — $3,550 tax, less 10% credit',
+     A.stateTaxAnnual('CT', 90000, 'mfj', 0), (400 + 0.045*70000) * 0.90, 0.01);
+  eq('CT single $120,000 — $5,950 + $250 add-back (C) + $75 recapture (D), no credit',
+     A.stateTaxAnnual('CT', 120000, 'single', 0), 4750 + 0.06*20000 + 250 + 75, 0.01);
+
+  /* OH verified Nov 2026 against ORC 5747.02(A)(3)(c): $332 plus 2.75% over
+     $26,050, after the per-person exemption (TY2025 amounts until 2026's are
+     published) and the $20 credit below $30,000. */
+  eq('OH single $50,000 — exemption 2,150, then $332 + 2.75% over $26,050',
+     A.stateTaxAnnual('OH', 50000, 'single', 0), 332 + 0.0275*(50000-2150-26050), 0.01);
+  eq('OH single $28,000 — under $26,050 after the exemption: no tax',
+     A.stateTaxAnnual('OH', 28000, 'single', 0), 0, 0.01);
+  eq('OH single $30,000 — just over: $332 step, less the $20 credit',
+     A.stateTaxAnnual('OH', 30000, 'single', 0), 332 + 0.0275*(30000-2400-26050) - 20, 0.01);
+  eq('OH joint $90,000 — two exemptions of 1,900',
+     A.stateTaxAnnual('OH', 90000, 'mfj', 0), 332 + 0.0275*(90000-3800-26050), 0.01);
+
+  /* OR verified Nov 2026 (2026 OR-Estimate). Base $678 + 8.75% over $11,400
+     is DOR's printed Chart S row ($1 tolerance — DOR rounds the base). */
+  eq('OR single $60,000, $5,000 federal tax — both subtractions, less $260 credit',
+     A.stateTaxAnnual('OR', 60000, 'single', 5000),
+     678 + 0.0875*(60000 - 2900 - 5000 - 6000 - 11400) - 260, 1);
+  eq('OR single $132,000, $20,000 federal tax — subtraction cut to 60% of $8,750, no credit',
+     A.stateTaxAnnual('OR', 132000, 'single', 20000),
+     678 + 0.0875*(132000 - 2900 - 8750*0.6 - 6000 - 11400), 1);
+  ok('OR federal tax subtraction is gone at $145,000',
+     A.stateTaxAnnual('OR', 145000, 'single', 20000) === A.stateTaxAnnual('OR', 145000, 'single', 0));
+
+  /* ID verified Nov 2026: 5.3% over the zero band (TY2025 4,811 until 2026 is
+     published), federal deduction, less the $155 grocery credit. */
+  eq('ID single $60,000', A.stateTaxAnnual('ID', 60000, 'single', 0),
+     (60000 - 16100 - 4811) * 0.053 - 155, 0.01);
+
+  /* ME verified Nov 2026: deduction 15,700 (36 MRSA 5124-C), exemption 5,300,
+     MRS base tax $1,589 at $27,400 ($1 tolerance). */
+  eq('ME single $60,000 — $15,700 deduction and $5,300 exemption',
+     A.stateTaxAnnual('ME', 60000, 'single', 0), 1589 + 0.0675*(60000-15700-5300-27400), 1);
+  eq('ME single $120,000 — deduction phased down above $102,250',
+     A.stateTaxAnnual('ME', 120000, 'single', 0),
+     4117 + 0.0715*(120000 - (15700 - 15700*(120000-102250)/75000) - 5300 - 64850), 1);
+
+  /* VT verified Nov 2026: 2026 preliminary brackets, TY2025 deduction and the
+     $5,300 personal exemption that was missing. */
+  eq('VT single $60,000 — deduction and exemption, all at 3.35%',
+     A.stateTaxAnnual('VT', 60000, 'single', 0), (60000 - 7650 - 5300) * 0.0335, 0.01);
+
   // MA verified Oct 2026: flat 5.00%, $4,400 / $8,800 personal exemption.
   ok('MA is flat 5.00%', A.STATES.MA.flat === 0.05);
   eq('MA single $50,000 = 5% of income less the $4,400 exemption',

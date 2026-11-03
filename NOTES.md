@@ -544,6 +544,53 @@ against $15,000 for single, so an SC head of household is now over-taxed. Fixing
 it means a third slot in every `sd` and `b` entry, which is a real change to 51
 records; worth doing, but not worth doing carelessly.
 
+## The nine "taxed only if stationed there" states (November 2026)
+
+The October audit covered the 20 jurisdictions that tax military pay wherever
+the member is stationed. It did **not** cover the nine that tax a resident's
+pay only while stationed in the state (`cond:true`): CA, CT, ID, ME, NY, OH,
+OR, PA, VT. California alone covers San Diego, Pendleton and Twentynine Palms.
+All nine were then read against their own revenue department or statute.
+**Eight of nine were wrong; only PA was right.**
+
+| State | What was wrong | Effect on a $45k single member |
+| --- | --- | --- |
+| CA | 2024 brackets and deduction (two years stale); no $158 / $316 exemption credit | over-taxed ~$16/mo |
+| CT | no personal exemption (Table A), add-back (C), recapture (D) or personal credit (E) | over-taxed ~$15/mo |
+| ID | 5.3% from the first dollar; no zero band; no $155 grocery credit | over-taxed ~$34/mo |
+| ME | deduction 8,350 instead of 15,700; no $5,300 exemption | over-taxed ~$68/mo |
+| NY | flat 5.5% instead of nine brackets; no recapture above $107,650 | over-taxed ~$17/mo |
+| OH | no $332 step at $26,050 (ORC 5747.02); no exemption; no $20 credit | **under**-taxed ~$23/mo |
+| OR | no federal tax subtraction (up to $8,750); no $6,000 military subtraction | over-taxed ~$70/mo |
+| PA | — correct (3.07%, no deductions) | — |
+| VT | 2025 brackets; no $5,300 exemption | over-taxed ~$15/mo |
+
+Every entry now carries its source and date in a comment beside it, and a
+golden-value test against the state's own printed base tax or table.
+
+Two engine hooks were added for rules no key could express: `ded(agi, fi, fed)`
+returns an extra deduction (CT and OH banded exemptions, OR's capped federal
+subtraction and military subtraction) and `adjust(tax, agi, fi, inc)` reshapes
+the tax (CT Tables C-E, OH's $332 step and $20 credit, OR's credit cutoff, VT's
+3% minimum). NY got a `recapture` key; CT and NY a `condNote`, because their
+"stationed elsewhere" exemption needs all of: no home in the state, a home
+outside it (barracks do not count), and 30 days or less there.
+
+**Still provisional — re-check in December/January:**
+
+- **Maine**: brackets, the $5,300 exemption and the phase-out start were taken
+  from excerpts of the official MRS PDFs, because maine.gov blocks automated
+  reading. Only the $15,700 deduction was read directly (statute). Open
+  `ind_tax_rate_sched_2026_rev.pdf` in a browser and confirm every figure.
+- **Not yet published for 2026**, so the latest published year is used and
+  labelled: ID zero band (TY2025 4,811 / 9,622), OH exemptions (TY2025), VT
+  deduction and exemption (TY2025), OR deduction and credit (DOR estimates
+  disagree: 2,900 vs 2,910, $260 vs $263), CA credit phase-out (irrelevant
+  below $252k).
+- **Approximations**: NY recapture is exact for single taxable income up to
+  215,400 / joint 161,550 and may overstate above by up to $807; OH's joint
+  filing credit is not applied (needs $500+ income from each spouse).
+
 ## Open items at handover (September 21, 2026)
 
 Written before a period of leave, so whoever picks this up is not starting from

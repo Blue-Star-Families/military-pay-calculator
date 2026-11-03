@@ -631,18 +631,71 @@ const STATES = {
   "AK":{name:"Alaska",none:true},
   "AZ":{name:"Arizona",exemptDefault:true,flat:.025,sd:[16100,32200]},
   "AR":{name:"Arkansas",exemptDefault:true,flat:.039,sd:[2340,4680]},
-  "CA":{name:"California",cond:true,sd:[5540,11080],b:{
-    single:[[0,.01],[11079,.02],[26264,.04],[41452,.06],[57542,.08],[72724,.093],[371479,.103],[445771,.113],[742953,.123],[1000000,.133]],
-    mfj:[[0,.01],[22158,.02],[52528,.04],[82904,.06],[115084,.08],[145448,.093],[742958,.103],[891542,.113],[1000000,.123],[1485906,.133]]}},
+  /* CA verified Nov 2026 against FTB Tax News, "2026 Indexing" (updated
+     13 Oct 2026), which prints the 2026 Schedules X and Y and the 2026
+     deduction and credit amounts beside the 2025 ones.
+     WAS: 2024 brackets and a 2024 deduction (5,540 / 11,080) — two years stale
+     — and NO personal exemption credit, which is a credit against tax, not a
+     deduction: $158 single, $316 joint for 2026. Dependants add $491 each but
+     the app does not ask for a count. The extra 1% over $1,000,000 is the
+     Behavioral Health Services Tax, folded into the top bracket.
+     Military: taxed while stationed in CA (TDY away does not change that);
+     a CA domiciliary PCS'd outside CA is a nonresident and the pay is not
+     CA-source (FTB Pub 1032). Credit phase-out starts above $252,203 AGI
+     (2025 figure) — far above any basic pay, so not modelled. */
+  "CA":{name:"California",cond:true,sd:[5900,11800],credit:[158,316],b:{
+    single:[[0,.01],[11456,.02],[27157,.04],[42861,.06],[59498,.08],[75197,.093],[384109,.103],[460927,.113],[768213,.123],[1000000,.133]],
+    mfj:[[0,.01],[22912,.02],[54314,.04],[85722,.06],[118996,.08],[150394,.093],[768218,.103],[921854,.113],[1000000,.123],[1536426,.133]]}},
   /* CO verified Oct 2026: flat 4.40% (Legislative Council Staff; the 2024 bill
      to cut it to 4.0% was postponed indefinitely and never took effect).
      Colorado starts from *federal* taxable income, so the federal standard
      deduction flows through — 16,100 / 32,200 is correct by construction and
      must be kept in step with STD_DED above, not maintained separately. */
   "CO":{name:"Colorado",flat:.044,sd:[16100,32200]},
-  "CT":{name:"Connecticut",cond:true,sd:[0,0],b:{
-    single:[[0,.02],[10000,.045],[50000,.055],[100000,.06],[200000,.065],[250000,.069],[500000,.0699]],
-    mfj:[[0,.02],[20000,.045],[100000,.055],[200000,.06],[400000,.065],[500000,.069],[1000000,.0699]]}},
+  /* CT verified Nov 2026 against DRS TPG-211 "2026 Withholding Calculation
+     Rules" (Rev. 12/25): "unchanged from 2025", Tables A-E, which are the
+     annual CT-1040 TCS tables (single = Code F, joint = Code C). Brackets were
+     right. MISSING until now, everything that sits around them:
+       A  personal exemption, 15,000 / 24,000, minus 1,000 per 1,000 of AGI
+          (or part) over 30,000 / 48,000 — worth ~$700 a year to a junior member;
+       C  2% bracket add-back, 25 / 50 per 5,000 over 56,500 / 100,500;
+       D  benefit recapture over 105,000 / 210,000;
+       E  personal tax credit, a percentage OFF the tax (.10 for most single
+          incomes 33,300-60,000).
+     Military: taxed as a resident wherever stationed UNLESS, for the whole
+     year, no CT home, a home outside CT (barracks do not count) and 30 days or
+     less in CT (DRS IP 2019(5), Group A). */
+  "CT":{name:"Connecticut",cond:true,sd:[0,0],
+    condNote:"Taxed if stationed in Connecticut. Stationed elsewhere, you are exempt only if, all year, you keep no home in CT, keep one outside CT (barracks do not count), and spend 30 days or less in CT — check the box only then.",
+    ded:(agi,fi)=>{ const base=fi?24000:15000, start=fi?48000:30000;
+      return agi<=start ? base : Math.max(0, base-1000*Math.ceil((agi-start)/1000)); },
+    adjust:(tax,agi,fi)=>{
+      const steps=(x,from,step)=>Math.ceil((x-from)/step);
+      let add=0;                                                  // Table C
+      if(fi){ if(agi>100500) add=Math.min(500, 50*steps(agi,100500,5000)); }
+      else  { if(agi>56500)  add=Math.min(250, 25*steps(agi,56500,5000)); }
+      let rec=0;                                                  // Table D
+      if(fi){
+        if(agi>1000000) rec=Math.min(6800, 5900+100*steps(agi,1000000,10000));
+        else if(agi>690000) rec=5900;
+        else if(agi>400000) rec=500+180*steps(agi,400000,10000);
+        else if(agi>300000) rec=500;
+        else if(agi>210000) rec=50*steps(agi,210000,10000);
+      } else {
+        if(agi>500000) rec=Math.min(3400, 2950+50*steps(agi,500000,5000));
+        else if(agi>345000) rec=2950;
+        else if(agi>200000) rec=250+90*steps(agi,200000,5000);
+        else if(agi>150000) rec=250;
+        else if(agi>105000) rec=25*steps(agi,105000,5000);
+      }
+      const E=fi                                                  // Table E
+        ? [[30000,.75],[30500,.70],[31000,.65],[31500,.60],[32000,.55],[32500,.50],[33000,.45],[33500,.40],[40000,.35],[40500,.30],[41000,.25],[41500,.20],[50000,.15],[50500,.14],[51000,.13],[51500,.12],[52000,.11],[96000,.10],[96500,.09],[97000,.08],[97500,.07],[98000,.06],[98500,.05],[99000,.04],[99500,.03],[100000,.02],[100500,.01]]
+        : [[18800,.75],[19300,.70],[19800,.65],[20300,.60],[20800,.55],[21300,.50],[21800,.45],[22300,.40],[25000,.35],[25500,.30],[26000,.25],[26500,.20],[31300,.15],[31800,.14],[32300,.13],[32800,.12],[33300,.11],[60000,.10],[60500,.09],[61000,.08],[61500,.07],[62000,.06],[62500,.05],[63000,.04],[63500,.03],[64000,.02],[64500,.01]];
+      let dec=0; for(const [upTo,d] of E){ if(agi<=upTo){ dec=d; break; } }
+      return (tax+add+rec)*(1-dec);
+    },
+    b:{single:[[0,.02],[10000,.045],[50000,.055],[100000,.06],[200000,.065],[250000,.069],[500000,.0699]],
+       mfj:[[0,.02],[20000,.045],[100000,.055],[200000,.06],[400000,.065],[500000,.069],[1000000,.0699]]}},
   /* DE verified Oct 2026. Rates per Division of Revenue PIT FAQ (updated
      9 Sep 2026): 2.2%-5.55% under $60,000, 6.6% at $60,000+. Deduction
      3,250 / 6,500. Both were already correct.
@@ -695,7 +748,18 @@ const STATES = {
   "HI":{name:"Hawaii",sd:[8000,16000],b:{
     single:[[0,.014],[9600,.032],[14400,.055],[19200,.064],[24000,.068],[36000,.072],[48000,.076],[125000,.079],[175000,.0825],[225000,.09],[275000,.10],[325000,.11]],
     mfj:[[0,.014],[19200,.032],[28800,.055],[38400,.064],[48000,.068],[72000,.072],[96000,.076],[250000,.079],[350000,.0825],[450000,.09],[550000,.10],[650000,.11]]}},
-  "ID":{name:"Idaho",cond:true,flat:.053,sd:[16100,32200]},
+  /* ID verified Nov 2026: 5.3% (Idaho Code 63-3024 as amended 2025 ch. 13;
+     the 2026 bill H0589 to restore 5.695% was never enacted) on taxable
+     income OVER an indexed zero band. WAS: 5.3% from the first dollar.
+     The 2026 band is not yet published; 4,811 / 9,622 is TY2025 (Form 40
+     instructions, EIN00046), so this slightly over-taxes until it is.
+     Deduction conforms to federal (IRC as of 1 Jan 2026). Grocery credit
+     $155 a person (63-3024A) — refundable in law, modelled as a credit
+     against tax, which only differs for near-zero tax.
+     Military: taxed while stationed in ID; pay for service outside ID is
+     deducted after 120+ consecutive days of active duty (63-3022(h)). */
+  "ID":{name:"Idaho",cond:true,sd:[16100,32200],credit:[155,310],b:{
+    single:[[0,0],[4811,.053]],mfj:[[0,0],[9622,.053]]}},
   "IL":{name:"Illinois",exemptDefault:true,flat:.0495,sd:[2775,5550]},
   "IN":{name:"Indiana",exemptDefault:true,flat:.0295,sd:[1000,2000]},
   "IA":{name:"Iowa",exemptDefault:true,flat:.039,sd:[16100,32200]},
@@ -719,9 +783,22 @@ const STATES = {
      un-indexed base — which under-deducts slightly and therefore over-states
      tax by a few dollars a month. Known and bounded, not guessed at. */
   "LA":{name:"Louisiana",flat:.03,sd:[12500,25000]},
-  "ME":{name:"Maine",cond:true,sd:[8350,16700],b:{
-    single:[[0,.058],[27399,.0675],[64849,.0715]],
-    mfj:[[0,.058],[54849,.0675],[129749,.0715]]}},
+  /* ME verified Nov 2026. Deduction read directly from 36 MRSA 5124-C(1-C):
+     2026 is 15,700 single, x2 joint (federal conformity starts 2027).
+     WAS: 8,350 / 16,700 — under half — and NO personal exemption.
+     Brackets, the $5,300 exemption and the deduction phase-out start come from
+     MRS "2026 Individual Income Tax Rate Schedules" (revised 20 May 2026) and
+     the 2026 estimated-tax worksheets; maine.gov blocks automated reading, so
+     those were taken from excerpts of the official PDFs — CONFIRM BY HAND.
+     The printed base taxes reproduce exactly (27,400 x 5.8% = 1,589).
+     The deduction shrinks above 102,250 / 204,550 by deduction x excess /
+     75,000 (150,000 joint), which is the sdPhase key.
+     Military: pay for service with a permanent duty station outside ME is
+     subtracted (36 MRSA 5122(2)(LL)); taxed while stationed in ME. */
+  "ME":{name:"Maine",cond:true,sd:[15700,31400],persExempt:[5300,10600],
+    sdPhase:{start:[102250,204550],rate:[15700/75000,31400/150000]},b:{
+    single:[[0,.058],[27400,.0675],[64850,.0715]],
+    mfj:[[0,.058],[54850,.0675],[129750,.0715]]}},
   "MD":{name:"Maryland",sd:[3350,6700],local:.032,b:{
     single:[[0,.02],[1000,.03],[2000,.04],[3000,.0475],[100000,.05],[125000,.0525],[150000,.055],[250000,.0575],[500000,.0625],[1000000,.065]],
     mfj:[[0,.02],[1000,.03],[2000,.04],[3000,.0475],[150000,.05],[175000,.0525],[225000,.055],[300000,.0575],[600000,.0625],[1200000,.065]]}},
@@ -788,18 +865,76 @@ const STATES = {
     single:[[0,.014],[20000,.0175],[35000,.035],[40000,.05525],[75000,.0637],[500000,.0897],[1000000,.1075]],
     mfj:[[0,.014],[20000,.0175],[50000,.0245],[70000,.035],[80000,.05525],[150000,.0637],[500000,.0897],[1000000,.1075]]}},
   "NM":{name:"New Mexico",exemptDefault:true,flat:.049,sd:[16100,32200]},
-  "NY":{name:"New York",cond:true,flat:.055,sd:[8000,16050]},
+  /* NY verified Nov 2026 against IT-2105-I (2026) p.10 and Tax Law §601(a)-(c)
+     para (vii) "after 2025 and before 2027"; the two agree row for row.
+     WAS: a flat 5.5% — NY has nine brackets. Deduction 8,000 / 16,050 was right;
+     there is no personal exemption (dependants $1,000 each, not asked).
+     `recapture`: above $107,650 NYAGI the benefit of the lower brackets is
+     clawed back, phased in over the next $50,000, until all taxable income is
+     taxed at its top bracket rate (IT-2105-I worksheets). Exact for single
+     taxable income up to 215,400 and joint up to 161,550; above those, NY phases
+     each later step over its own window, so this may overstate by up to $807.
+     Military: taxed as a resident wherever stationed UNLESS, for the whole year,
+     the member keeps no permanent home in NY, keeps one outside NY (barracks do
+     not count), and spends 30 days or less in NY (tax.ny.gov, Group A). */
+  "NY":{name:"New York",cond:true,sd:[8000,16050],recapture:{start:107650,span:50000},
+    condNote:"Taxed if stationed in New York. Stationed elsewhere, you are exempt only if, all year, you keep no home in NY, keep one outside NY (barracks do not count), and spend 30 days or less in NY — check the box only then.",
+    b:{single:[[0,.039],[8500,.044],[11700,.0515],[13900,.054],[80650,.059],[215400,.0685],[1077550,.0965],[5000000,.103],[25000000,.109]],
+       mfj:[[0,.039],[17150,.044],[23600,.0515],[27900,.054],[161550,.059],[323200,.0685],[2155350,.0965],[5000000,.103],[25000000,.109]]}},
   /* NC verified Oct 2026: flat 3.99% for 2026 (S.L. 2023-134; was 4.25% in
      2025), deduction 12,750 / 25,500 (G.S. 105-153.5). HoH is 19,125 by statute
      but collapses to single here — see NOTES. 2027 is projected at 3.49%. */
   "NC":{name:"North Carolina",flat:.0399,sd:[12750,25500]},
   "ND":{name:"North Dakota",exemptDefault:true,flat:.025,sd:[16100,32200]},
-  "OH":{name:"Ohio",cond:true,sd:[0,0],b:{
-    single:[[0,0],[26050,.0275]],mfj:[[0,0],[26050,.0275]]}},
+  /* OH verified Nov 2026 against ORC 5747.02(A)(3)(c) (HB 96, eff. 30 Sep
+     2025): for 2026, nothing on the first 26,050, then "$332.00 plus 2.75% of
+     the amount in excess of $26,050" — a $332 step, which the brackets alone
+     cannot express. WAS: no step and NO personal exemption.
+     Exemption per person by MAGI (5747.025): 2026 indexed amounts are not yet
+     published, so TY2025's 2,400 / 2,150 / 1,900 (2025 IT 1040 booklet) are
+     used; none at $500,000+. $20 per exemption credit when MAGI less
+     exemptions is under 30,000 (5747.022). The joint filing credit needs $500+
+     of income from EACH spouse, which a single-income household lacks — not
+     applied. No standard deduction.
+     Military: deducted while stationed outside OH; not while stationed in OH
+     (5747.01(A)(21)). */
+  "OH":{name:"Ohio",cond:true,sd:[0,0],
+    ded:(agi,fi)=>(fi?2:1)*(agi<=40000?2400:agi<=80000?2150:agi<500000?1900:0),
+    adjust:(tax,agi,fi,inc)=>{
+      const n=fi?2:1, ex=n*(agi<=40000?2400:agi<=80000?2150:agi<500000?1900:0);
+      let t = inc>26050 ? tax+332 : tax;
+      if(agi-ex<30000) t-=20*n;
+      return t;
+    },
+    b:{single:[[0,0],[26050,.0275]],mfj:[[0,0],[26050,.0275]]}},
   "OK":{name:"Oklahoma",exemptDefault:true,flat:.0475,sd:[6350,12700]},
-  "OR":{name:"Oregon",cond:true,sd:[2910,5820],credit:[256,512],b:{
+  /* OR verified Nov 2026. Brackets right (2026 OR-Estimate, 150-101-026,
+     Rev. 10-07-25). Deduction 2,900 / 5,800 and exemption credit $260 per
+     person are DOR's 2026 ESTIMATES (OR-Estimate; OR-W-4 instructions Rev.
+     02-17-26) — the Dec 2025 withholding formulas say 2,910 / 5,820 / $263;
+     the final OR-40 figures come out around December.
+     MISSING until now, both large:
+       - the federal income tax subtraction, up to $8,750 (ORS 316.680,
+         316.695), stepping down 20% per $5,000 of AGI from $125,000
+         ($10,000 from $250,000 joint) to zero — worth up to ~$765 a year;
+       - the military pay subtraction: pay for service in OR is subtracted up to
+         $6,000 a year (ORS 316.792(2)(e)) — ~$525.
+     The exemption credit is not allowed at all above $100,000 AGI single /
+     $200,000 joint (ORS 316.085(5)) — a cutoff, not a phase-out.
+     Military: pay for service outside OR is subtracted in full (316.792). */
+  "OR":{name:"Oregon",cond:true,sd:[2900,5800],
+    ded:(agi,fi,fed)=>{
+      const start=fi?250000:125000, step=fi?10000:5000;
+      const cap = agi<start ? 8750 : 8750*Math.max(0, 1-0.2*(Math.floor((agi-start)/step)+1));
+      return Math.min(fed, cap) + Math.min(6000, agi);
+    },
+    adjust:(tax,agi,fi)=> agi>(fi?200000:100000) ? tax : tax-260*(fi?2:1),
+    b:{
     single:[[0,.0475],[4550,.0675],[11400,.0875],[125000,.099]],
     mfj:[[0,.0475],[9100,.0675],[22800,.0875],[250000,.099]]}},
+  /* PA verified Nov 2026: flat 3.07% (2026 REV-414(I)); no standard
+     deduction or exemption by law (PA-40 instructions). Active-duty pay earned
+     outside PA is not taxable; pay for service inside PA is. Unchanged. */
   "PA":{name:"Pennsylvania",cond:true,flat:.0307,sd:[0,0]},
   /* RI verified Oct 2026 against RI Division of Taxation ADV 2025-22
      (Inflation-adjusted amounts for Tax Year 2026, 3 Nov 2025).
@@ -854,9 +989,19 @@ const STATES = {
      phase-out THRESHOLDS (16,000 / 32,000) are indexed and have NOT been
      confirmed for 2026 — worth a few dollars a year at most. */
   "UT":{name:"Utah",flat:.0445,sd:[0,0],credit:[966,1932],creditPhase:{rate:.013,threshold:[16000,32000]}},
-  "VT":{name:"Vermont",cond:true,sd:[7650,15300],b:{
-    single:[[0,.0335],[49400,.066],[119700,.076],[249700,.0875]],
-    mfj:[[0,.0335],[82500,.066],[199450,.076],[304000,.0875]]}},
+  /* VT verified Nov 2026. Brackets: "2026 Preliminary Vermont Tax Rates",
+     IN-114 instructions (Rev. 10/25) — WAS the 2025 brackets. Base taxes
+     reproduce (50,750 x 3.35% = 1,700). The 2026 deduction and exemption are
+     not yet published; TY2025 IN-111 figures are used: deduction 7,650 /
+     15,300 and a $5,300 personal exemption that was MISSING until now
+     (~$178 a year at 3.35%). Above $150,000 AGI the tax is at least 3% of
+     AGI (IN-111 line 8, TY2025).
+     Military: pay for full-time active duty earned outside VT is exempt
+     (32 VSA 5823(a)(2)); taxed while stationed in VT. */
+  "VT":{name:"Vermont",cond:true,sd:[7650,15300],persExempt:[5300,10600],
+    adjust:(tax,agi)=> agi>150000 ? Math.max(tax, 0.03*agi) : tax,
+    b:{single:[[0,.0335],[50750,.066],[122850,.076],[256300,.0875]],
+       mfj:[[0,.0335],[84700,.066],[204750,.076],[312050,.0875]]}},
   "VA":{name:"Virginia",sd:[8750,17500],b:{
     single:[[0,.02],[3000,.03],[5000,.05],[17000,.0575]],
     mfj:[[0,.02],[3000,.03],[5000,.05],[17000,.0575]]}},
@@ -920,7 +1065,12 @@ function stateTaxAnnual(code, annualTaxable, filing, fedAnnual){
   // Personal exemptions taken on the same line as the deduction (Wisconsin).
   if(s.persExempt) sd += s.persExempt[fi];
   const fedDed=(s.fedDeduct)?Math.max(0, fedAnnual||0):0;   // e.g., Alabama: deduct federal income tax paid
-  const inc=Math.max(0, annualTaxable - sd - fedDed);
+  /* `ded` / `adjust`: per-state rules too irregular for a key — income-banded
+     exemptions (CT, OH), capped deductions (OR), add-backs, cliffs, credits
+     expressed as a share of tax, minimum taxes. annualTaxable is the stand-in
+     for the state's AGI, as everywhere else in this function. */
+  const extraDed=(typeof s.ded==="function")?Math.max(0, s.ded(annualTaxable, fi, fedAnnual||0)):0;
+  const inc=Math.max(0, annualTaxable - sd - fedDed - extraDed);
   let tax=0;
   if(s.b){
     const br=s.b[(filing==="mfj")?"mfj":"single"];
@@ -932,6 +1082,17 @@ function stateTaxAnnual(code, annualTaxable, filing, fedAnnual){
   } else if(s.flat!=null){
     tax = inc*s.flat;
   }
+  /* Bracket recapture (New York): above a starting income the lower brackets'
+     benefit is phased out, until all taxable income is taxed at the rate of the
+     bracket it reaches. annualTaxable stands in for NYAGI. */
+  if(s.recapture && s.b && annualTaxable>s.recapture.start){
+    const br=s.b[(filing==="mfj")?"mfj":"single"];
+    let top=br[0][1];
+    for(let i=0;i<br.length;i++){ if(inc>br[i][0]) top=br[i][1]; else break; }
+    const share=Math.min(1,(annualTaxable-s.recapture.start)/s.recapture.span);
+    tax += Math.max(0, inc*top - tax)*share;
+  }
+  if(typeof s.adjust==="function") tax=Math.max(0, s.adjust(tax, annualTaxable, fi, inc));
   if(s.local) tax += inc*s.local;
   if(s.credit){                                            // taxpayer credit (e.g., Utah, Oregon), optional phaseout
     let cr=s.credit[fi];
@@ -1163,6 +1324,7 @@ function stateNote(code){
   const s=STATES[code];
   if(s.none) return "No state income tax.";
   if(s.exemptDefault) return "Fully exempts active-duty military pay (box pre-checked).";
+  if(s.cond && s.condNote) return s.condNote;
   if(s.cond) return "Taxed if stationed in "+s.name+"; exempt if stationed elsewhere — check the box if you're stationed outside "+s.name+".";
   /* Maryland is the only state here with a local add-on, and we apply 3.20% —
      which is the *highest* county rate, not the average. Calling it "avg." was
