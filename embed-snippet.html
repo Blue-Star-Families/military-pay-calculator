@@ -11,8 +11,11 @@
   - allows the "Copy shareable link" button to use the clipboard.
 
   The height messages are only accepted from the calculator's own origin.
+  If the script is stripped, the calculator still loads, just at a fixed
+  height with its own scrollbar.
 -->
 <iframe id="bsf-pay-calc" title="Military Take-Home Pay Estimator"
+  src="https://blue-star-families.github.io/military-pay-calculator/"
   style="display:block;width:100%;height:1400px;border:0;"
   allow="clipboard-write"></iframe>
 <script>
@@ -27,6 +30,6 @@
     var h = Number(d.height);
     if (h > 0 && h < 100000) frame.style.height = h + "px";
   });
-  frame.src = CALC + location.search;
+  if (location.search) frame.src = CALC + location.search;
 })();
 </script>
