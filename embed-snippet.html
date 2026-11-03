@@ -1,0 +1,32 @@
+<!--
+  Embed snippet for the content hub page. Paste this whole block where the
+  calculator should appear. It needs to keep its <script>; if the CMS strips
+  scripts, use a "Custom HTML" / code block that allows them.
+
+  What it does:
+  - sizes the frame to the calculator's full height, so there is no inner
+    scrollbar on phones or when "Compare" is opened;
+  - passes a shared link's settings (?grade=O-3&...) through to the
+    calculator, so links people share from the hub reopen with their numbers;
+  - allows the "Copy shareable link" button to use the clipboard.
+
+  The height messages are only accepted from the calculator's own origin.
+-->
+<iframe id="bsf-pay-calc" title="Military Take-Home Pay Estimator"
+  style="display:block;width:100%;height:1400px;border:0;"
+  allow="clipboard-write"></iframe>
+<script>
+(function () {
+  var CALC = "https://blue-star-families.github.io/military-pay-calculator/";
+  var ORIGIN = new URL(CALC).origin;
+  var frame = document.getElementById("bsf-pay-calc");
+  window.addEventListener("message", function (e) {
+    if (e.origin !== ORIGIN || e.source !== frame.contentWindow) return;
+    var d = e.data;
+    if (!d || d.type !== "bsf-pay-calc:height") return;
+    var h = Number(d.height);
+    if (h > 0 && h < 100000) frame.style.height = h + "px";
+  });
+  frame.src = CALC + location.search;
+})();
+</script>

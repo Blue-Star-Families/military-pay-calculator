@@ -579,11 +579,56 @@ setTimeout(() => {
         eq('crafted link cannot prefill the name', g3('feedbackName').value, '');
         eq('crafted link cannot prefill the email', g3('feedbackEmail').value, '');
         eq('normal calculator params still restore', g3('grade').value, 'E-5');
-        report();
+        embedding();
       }, 250);
     }, 250);
   })();
 }, 400);
+
+// Embedding in the content hub: the page posts its height to the host only
+// when framed, and shared links can point at the hub instead of github.io.
+function embedding() {
+  G('Embedded in the content hub');
+  const HUB = 'https://bluestarfam.org/hub/pay-calculator/';
+  const quiet = new VirtualConsole();   // jsdom lacks execCommand; not under test here
+  const withBase = b => html.replace('const SHARE_BASE_URL = "";',
+                                     'const SHARE_BASE_URL = ' + JSON.stringify(b) + ';');
+  ok('SHARE_BASE_URL ships empty, so nothing changes before launch',
+     html.includes('const SHARE_BASE_URL = "";'));
+  eq('share links default to this page', w.eval('shareBase()'), URL_);
+
+  const sent = [];
+  const opts = (spyTop) => ({ runScripts: 'dangerously', pretendToBeVisual: true,
+    url: URL_, virtualConsole: quiet,
+    beforeParse(win) {
+      win.HTMLHtmlElement.prototype.getBoundingClientRect = () => ({ height: 2345.2 });
+      if (spyTop) { win.postMessage = (m, t) => sent.push(['self', m, t]); return; }
+      Object.defineProperty(win, 'parent', { configurable: true,
+        get: () => ({ postMessage: (m, t) => sent.push(['parent', m, t]) }) });
+    } });
+
+  const hub = new JSDOM(withBase(HUB + '?utm=x#top'), opts(false));
+  const top = new JSDOM(html, opts(true));
+  const bad = new JSDOM(withBase('javascript:alert(1)//'), { runScripts: 'dangerously',
+    pretendToBeVisual: true, url: URL_, virtualConsole: quiet });
+  setTimeout(() => {
+    const toParent = sent.filter(s => s[0] === 'parent');
+    eq('framed page posts its height once (no repeat for an unchanged height)', toParent.length, 1);
+    ok('message names its type and rounds the height up',
+       toParent[0] && toParent[0][1].type === 'bsf-pay-calc:height' && toParent[0][1].height === 2346);
+    eq('top-level page posts nothing', sent.filter(s => s[0] === 'self').length, 0);
+    eq('share links point at the hub once configured', hub.window.eval('shareBase()'), HUB);
+    eq('a non-https base is ignored', bad.window.eval('shareBase()'), URL_);
+
+    const hd = hub.window.document;
+    hd.getElementById('grade').value = 'O-3';
+    hd.getElementById('shareBtn').click();
+    ok('address bar stays on this page, since replaceState cannot cross origins',
+       hub.window.location.href.startsWith(URL_ + '?') && /grade=O-3/.test(hub.window.location.search));
+    void top;
+    report();
+  }, 300);
+}
 
 function report() {
   const total = passed + failed;

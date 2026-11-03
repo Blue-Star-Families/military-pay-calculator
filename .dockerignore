@@ -1,0 +1,8 @@
+node_modules
+.git
+.github
+*.pptx
+*.md
+test*.js
+build-*.js
+check-deck-fit.js

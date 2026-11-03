@@ -1442,13 +1442,23 @@ function legacyCopy(text){
     return okc;
   }catch(e){ return false; }
 }
+// Where shared links point. Empty means this page. When the calculator is
+// embedded in the content hub, set this to the hub URL so shared links land on
+// the hub rather than on the github.io page inside the frame. The hub's embed
+// snippet passes ?params through to the frame, so the link still restores.
+const SHARE_BASE_URL = "";
+function shareBase(){
+  const b=String(SHARE_BASE_URL||"").trim();
+  return /^https:\/\//i.test(b) ? b.split(/[?#]/)[0] : location.origin+location.pathname;
+}
 $("shareBtn").addEventListener("click",()=>{
   const qs=collectState();
   const isFile = location.protocol==="file:";
   const url = isFile ? (location.href.split("?")[0]+"?"+qs)
-                     : (location.origin+location.pathname+"?"+qs);
-  // keep the address bar in sync so the link is recoverable even if copying fails
-  if(!isFile){ try{ history.replaceState(null,"",url); }catch(e){} }
+                     : (shareBase()+"?"+qs);
+  // keep the address bar in sync so the link is recoverable even if copying
+  // fails; always this page's own address, since replaceState cannot cross origins
+  if(!isFile){ try{ history.replaceState(null,"",location.origin+location.pathname+"?"+qs); }catch(e){} }
   const b=$("shareBtn"), original="Copy shareable link";
   const done=okc=>{
     b.textContent = okc ? "Link copied!"
@@ -1700,6 +1710,30 @@ syncFeedbackContext();
 document.querySelectorAll("input,select").forEach(el=>el.addEventListener("input",syncFeedbackContext));
 document.querySelectorAll("select").forEach(el=>el.addEventListener("change",syncFeedbackContext));
 if($("feedbackToggle") && $("feedbackForm")) syncFeedbackDefaults();
+
+// ---- embedded in the content hub ----
+// A cross-origin host cannot measure this page, and a fixed-height iframe
+// clips on phones (~6,000px) and in compare mode. So, only when framed, post
+// our height to the host whenever it changes. Height is not sensitive, so the
+// target is "*"; the host's snippet checks the origin on its side. Measured
+// from <html>'s box, not scrollHeight, which never drops below the frame's
+// own height and so could only ever grow.
+const EMBED_MSG = "bsf-pay-calc:height";
+function embedHeight(){
+  return Math.ceil(document.documentElement.getBoundingClientRect().height);
+}
+(function(){
+  const host=window.parent;
+  if(!host || host===window || typeof host.postMessage!=="function") return;
+  let last=-1;
+  const send=()=>{
+    const h=embedHeight();
+    if(h>0 && h!==last){ last=h; try{ host.postMessage({type:EMBED_MSG,height:h},"*"); }catch(e){} }
+  };
+  if(typeof ResizeObserver==="function") new ResizeObserver(send).observe(document.documentElement);
+  window.addEventListener("load",send);
+  send();
+})();
 </script>
 </body>
 </html>

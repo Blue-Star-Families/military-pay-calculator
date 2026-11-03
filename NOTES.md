@@ -15,13 +15,16 @@ Internal reference for updating and maintaining the Military Take-Home Pay Estim
 | `package.json` / `package-lock.json` | Reproducible Node.js test scripts and pinned development dependencies. |
 | `.github/workflows/test.yml` | Runs both suites on pushes and pull requests. |
 
+| `README.md` | Public overview. |
+| `LICENSE` | MIT. |
+| `NOTES.md` | This file. |
+| `embed-snippet.html` | What the content hub pastes to embed the calculator: auto-height frame, shared-link pass-through. Not deployed. |
+| `Dockerfile` / `nginx.conf` / `.dockerignore` | Local preview that serves the site the way GitHub Pages does. Not deployed. |
+
 Check counts are deliberately not written here: each suite prints its own
 `PASS n/n` line, and hardcoded counts in this file went stale several times
 over. **After copying files in, confirm the count moved** — an unchanged count
 after adding tests means the run tested old files.
-| `README.md` | Public overview. |
-| `LICENSE` | MIT. |
-| `NOTES.md` | This file. |
 
 Both `index.html` and `bah-data.js` must be deployed together or BAH auto-fill breaks. Degraded mode is handled explicitly: if `bah-data.js` is missing or blocked, the station dropdowns are disabled and relabeled "BAH data unavailable — enter BAH manually," and every other calculation still works from a manually entered BAH.
 
@@ -548,6 +551,7 @@ an empty room. Nothing here is broken; these are decisions and unfinished
 verification, ordered by what bites first.
 
 *Updated October 7, 2026. Items 1 and 5 are now done; item 2 changed shape.*
+*Updated November 3, 2026. Item 2: share links and frame height are built; launch is down to two lines.*
 
 **Needs a person, not a code change**
 
@@ -559,16 +563,23 @@ verification, ordered by what bites first.
        visit. Brittany initially asked for it to be "inaccessible to the public"
        so the hub ranks — that would break the embed (and GitHub Pages cannot be
        private on a free org plan anyway). The real goal is met by `noindex`.
-     - **At hub launch, change two lines in `index.html`:** line ~8
-       `<link rel="canonical">` → the hub URL; line ~10 `robots` → `noindex,follow`.
-       Do these together and *at* launch — not before, or there is a window
-       where nothing ranks.
-     - **Share links** build from `location.origin + location.pathname`
-       (`collectState` area, ~line 1448). Inside an iframe that is the github.io
-       URL, so shared links would bypass the hub. Needs a configurable base URL.
-     - **Height.** The page is ~6,000px tall on a phone and grows in compare
-       mode. A fixed-height iframe will clip or gap. Needs a small `postMessage`
-       height broadcast here plus a few lines on the hub page.
+     - **At hub launch, change three lines in `index.html`, together:**
+       `<link rel="canonical">` → the hub URL; `robots` → `noindex,follow`;
+       `SHARE_BASE_URL` → the hub URL. Not before launch, or there is a window
+       where nothing ranks and shared links land on an empty page. Ask Josh
+       whether to add `<meta name="googlebot" content="indexifembedded">`,
+       Google's tag for letting a `noindex` page's content count inside the
+       page that embeds it.
+     - **Share links — built (November 2026).** `SHARE_BASE_URL` (empty = this
+       page) sets where "Copy shareable link" points. The hub snippet forwards
+       its `?params` into the frame, so a hub link reopens with the numbers.
+     - **Height — built (November 2026).** When framed, the page posts
+       `{type:"bsf-pay-calc:height", height}` to its host on every size change
+       (ResizeObserver on `<html>`); `embed-snippet.html` sizes the iframe from
+       it, accepting only the calculator's origin. Checked in headless Chrome
+       across origins: grows and shrinks live with Compare and with width, no
+       inner scrollbar. ResizeObserver only runs while the page renders, so a
+       hidden tab catches up when shown — expected, not a bug.
      - **Design and copy changes happen in this repo**, not the CMS: the hub's
        CSS cannot reach into a cross-origin iframe. Brand styles and copy edits
        come to us and go through the tests like any other change.
@@ -618,8 +629,7 @@ October 2026 — the pay cap, three special-pay defaults, nine state tax entries
 was found by a reviewer with a real pay statement or by reading a primary
 source. **None was found by the automated suite, which passed throughout.** The
 suite protects against regressions. It cannot tell you a number was wrong the
-day it was typed in. The suite protects against
-regressions. It cannot tell you a number was wrong the day it was typed in.
+day it was typed in.
 
 ## Known limitations (intentional)
 
@@ -706,6 +716,17 @@ email addresses" setting off — question 3 asks for it explicitly, with context
 npm ci                # install the exact locked test dependency (once per clone)
 npm test              # engine suite + DOM integration suite
 ```
+
+No Node on the machine? Run them in Docker instead:
+
+```
+docker run --rm -v "$PWD":/src:ro -w /app node:22-alpine \
+  sh -c 'cp -r /src/. /app/ && rm -rf node_modules && npm ci && npm test'
+```
+
+Local preview the way GitHub Pages serves it:
+`docker build -t military-pay-calculator . && docker run -d --name military-pay-calculator -p 8080:80 military-pay-calculator`,
+then open http://localhost:8080. Rebuild after editing files.
 
 `test-dom.js` parses the real `index.html` in a real DOM, executes the real
 scripts, and drives the UI with dispatched events — catching anything a stubbed
