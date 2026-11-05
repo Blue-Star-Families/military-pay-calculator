@@ -593,6 +593,20 @@ outside it (barracks do not count), and 30 days or less there.
   215,400 / joint 161,550 and may overstate above by up to $807; OH's joint
   filing credit is not applied (needs $500+ income from each spouse).
 
+## Closing the "known imperfect" list (November 2026)
+
+| State | Resolution |
+| --- | --- |
+| AL | **Fixed.** Deduction follows the statutory chart (floor 2,500 / 5,000 from $35,500 AGI); $1,500 / $3,000 personal exemption added. |
+| HI | **Fixed.** Brackets confirmed against HRS 235-51; $1,144 personal exemption added. |
+| UT | **Fixed.** Credit phase-out at 18,696 / 37,392 (2026 TC-40 draft — re-check when final). |
+| MT | **Fixed.** 4.7% / 5.65% brackets; exemption requires entering active duty from Montana (box note). |
+| LA | **Fixed.** 2026 deduction 12,838 / 25,676 (RIB 26-019). The box now applies the $50,000 capped exclusion for service outside LA (`exemptCap`), instead of exempting everything. |
+| DC | **Still open, deliberately.** Current DC law decouples (15,000 / 30,000) but OTR's 2026 D-40ES prints 16,100 / 32,200. Change when OTR publishes. |
+
+Remaining knowingly imperfect: DC's deduction; HoH collapsing to single
+everywhere; dependants never counted (exemptions and credits assume none).
+
 ## Open items at handover (September 21, 2026)
 
 Written before a period of leave, so whoever picks this up is not starting from

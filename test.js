@@ -807,6 +807,28 @@ G('State tax: hand-computed golden values');
      fails if it is dropped again. */
   eq('HI single, taxable exactly $48,000 = HRS 235-51 base $2,539',
      A.stateTaxAnnual('HI', 48000 + 8000 + 1144, 'single', 0), 2539, 1);
+  /* AL Nov 2026: Standard Deduction Chart (40-18-15(b)(4)) plus the personal
+     exemption (40-18-19), worked by hand. */
+  eq('AL single $60,000, $6,000 federal tax — chart floor 2,500 + exemption 1,500',
+     A.stateTaxAnnual('AL', 60000, 'single', 6000), 500*0.02 + 2500*0.04 + (50000-3000)*0.05, 0.01);
+  eq('AL joint $25,000 — full chart 8,500 + exemption 3,000',
+     A.stateTaxAnnual('AL', 25000, 'mfj', 0), 1000*0.02 + 5000*0.04 + (13500-6000)*0.05, 0.01);
+  /* LA Nov 2026: RIB 26-019, deduction 12,838 / 25,676. */
+  eq('LA single $60,000 — 3% after the 2026 indexed deduction',
+     A.stateTaxAnnual('LA', 60000, 'single', 0), (60000-12838)*0.03, 0.01);
+  /* LA's exclusion for service outside the state is capped at $50,000
+     (R.S. 47:293(9)(e)): the box must lower the tax, not erase it, for a
+     member paid more than the cap. */
+  (() => {
+    baseline(); set('grade','O-5'); set('yos','14');
+    const taxed = calcScenario(2500, 'LA', false).stateTax;
+    const excluded = calcScenario(2500, 'LA', true).stateTax;
+    ok('LA box applies a capped exclusion, not a full exemption (O-5)',
+       excluded > 0 && excluded < taxed);
+    eq('LA exclusion removes exactly $50,000 of pay at 3%',
+       (taxed - excluded) * 12, 50000 * 0.03, 0.01);
+  })();
+
   /* MT confirmed Nov 2026 against MCA 15-30-2103: 4.7% / 5.65% at 47,500. */
   eq('MT single $80,000 — 4.7% to $47,500, 5.65% above (was flat 5.9%)',
      A.stateTaxAnnual('MT', 80000, 'single', 0), 47500*0.047 + (80000-16100-47500)*0.0565, 0.01);

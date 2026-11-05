@@ -627,7 +627,22 @@ const STATES = {
      At military income levels the chart is likely at or near its floor.
      Changing this on a guess would be worse than leaving it. Needs the chart
      from the Form 40 booklet. */
-  "AL":{name:"Alabama",fedDeduct:true,sd:[3000,8500],b:{single:[[0,.02],[500,.04],[3000,.05]],mfj:[[0,.02],[1000,.04],[6000,.05]]}},
+  /* AL, Nov 2026 — the open question above is now answered. Code of Alabama
+     40-18-15(b)(4) and the Standard Deduction Chart (2025 Form 40 booklet,
+     p. 9): 3,000 single / 8,500 joint below $26,000 AGI, then minus $25 / $175
+     for each $500 over $25,500, floor 2,500 / 5,000 — reached at $35,500, so
+     at military incomes it is the FLOOR, and 3,000 / 8,500 over-deducted.
+     MISSING: the personal exemption, $1,500 single / $3,000 joint (40-18-19
+     (a)(8); booklet line 13). Not indexed; HB389 (2025), which would have
+     raised the deduction, died. Dependants ($1,000 / $500 / $300 by AGI) are
+     not asked. Federal income tax paid is deductible, uncapped (40-18-15(c)). */
+  "AL":{name:"Alabama",fedDeduct:true,sd:[0,0],
+    ded:(agi,fi)=>{
+      const steps=Math.max(0, Math.floor((agi-25500)/500));
+      const chart = fi ? Math.max(5000, 8500-175*steps) : Math.max(2500, 3000-25*steps);
+      return chart + (fi?3000:1500);
+    },
+    b:{single:[[0,.02],[500,.04],[3000,.05]],mfj:[[0,.02],[1000,.04],[6000,.05]]}},
   "AK":{name:"Alaska",none:true},
   "AZ":{name:"Arizona",exemptDefault:true,flat:.025,sd:[16100,32200]},
   "AR":{name:"Arkansas",exemptDefault:true,flat:.039,sd:[2340,4680]},
@@ -720,7 +735,14 @@ const STATES = {
      revenue presentation refers to pending budget legislation that would
      decouple DC from a federal provision, and no OTR income-tax source for 2026
      was reachable. Left on federal conformity deliberately rather than guessed;
-     if DC decoupled from the OBBBA increase, the 2025 figure would apply. */
+     if DC decoupled from the OBBBA increase, the 2025 figure would apply.
+     Nov 2026 update — STILL UNRESOLVED, deliberately unchanged: DC's FY2027
+     Budget Support Emergency Act (Act 26-416, eff. 13 Aug 2026; reportedly
+     made permanent as Law 26-189) decouples through 2029 with a basic
+     deduction of 15,000 / 30,000 indexed from 2025, which would make 2026
+     15,000 / 30,000. But OTR's own 2026 D-40ES (Rev. 03/2026) prints 16,100 /
+     32,200, and OTR has published no 2026 figure since. Change it when OTR
+     does. Difference: ~$6 a month at $60,000. */
   "DC":{name:"Dist. of Columbia",sd:[16100,32200],b:{
     single:[[0,.04],[10000,.06],[40000,.065],[60000,.085],[250000,.0925],[500000,.0975],[1000000,.1075]],
     mfj:[[0,.04],[10000,.06],[40000,.065],[60000,.085],[250000,.0925],[500000,.0975],[1000000,.1075]]}},
@@ -781,13 +803,16 @@ const STATES = {
      prints the 2025 figures. Left alone deliberately; recheck in January. */
   "KS":{name:"Kansas",sd:[3605,8240],b:{single:[[0,.052],[23000,.0558]],mfj:[[0,.052],[46000,.0558]]}},
   "KY":{name:"Kentucky",exemptDefault:true,flat:.035,sd:[3270,6540]},
-  /* LA: flat 3% verified Oct 2026 (LDR — graduated brackets repealed for
-     periods beginning on or after 1 Jan 2025). The deduction is 12,500 / 25,000
-     by statute for 2025, and from 2026 it is indexed to CPI-U. The indexed 2026
-     figure is not published anywhere I could reach, so this holds the
-     un-indexed base — which under-deducts slightly and therefore over-states
-     tax by a few dollars a month. Known and bounded, not guessed at. */
-  "LA":{name:"Louisiana",flat:.03,sd:[12500,25000]},
+  /* LA: flat 3% verified Oct 2026 (LDR; R.S. 47:32(A) "three percent on net
+     income"). Deduction, Nov 2026: 12,838 / 25,676 — LDR RIB 26-019 (28 Sep
+     2026), the 2.7% CPI-U indexing of R.S. 47:294's 12,500 base. WAS the
+     un-indexed 12,500 / 25,000. Do NOT use the withholding tables' provisional
+     12,875 / 25,750 (RIB 26-005).
+     Military: taxed, but pay for service outside LA during 120+ consecutive
+     days of active duty is excluded UP TO $50,000 (R.S. 47:293(9)(e); RIB
+     22-015). WAS: no way to claim it. The exempt box now applies that capped
+     exclusion (exemptCap) instead of exempting everything. */
+  "LA":{name:"Louisiana",flat:.03,sd:[12838,25676],exemptCap:50000},
   /* ME verified Nov 2026. Deduction read directly from 36 MRSA 5124-C(1-C):
      2026 is 15,700 single, x2 joint (federal conformity starts 2027).
      WAS: 8,350 / 16,700 — under half — and NO personal exemption.
@@ -1344,6 +1369,7 @@ function stateNote(code){
   if(s.exemptDefault && s.exemptNote) return s.exemptNote;
   if(s.exemptDefault) return "Fully exempts active-duty military pay (box pre-checked).";
   if(s.cond && s.condNote) return s.condNote;
+  if(s.exemptCap) return "Taxes active-duty military pay. Stationed outside "+s.name+" for 120+ days in a row? Check the box: up to $"+s.exemptCap.toLocaleString("en-US")+" of that pay is excluded.";
   if(s.cond) return "Taxed if stationed in "+s.name+"; exempt if stationed elsewhere — check the box if you're stationed outside "+s.name+".";
   /* Maryland is the only state here with a local add-on, and we apply 3.20% —
      which is the *highest* county rate, not the average. Calling it "avg." was
@@ -1482,8 +1508,11 @@ function calcScenario(bah, stateCode, stateExempt, scn){
   // state income tax — marginal, stacked, conforms to federal combat exclusion
   let stateTax=0;
   const st=STATES[stateCode];
-  if(!stateExempt && !st.none){
-    stateTax = stateTaxAnnual(stateCode, memberAnnual, filing, fedTax*12)/12;
+  if(!st.none){
+    /* A capped exclusion (Louisiana): the box removes up to exemptCap of pay,
+       not all of it. Everywhere else the box exempts the pay entirely. */
+    if(!stateExempt) stateTax = stateTaxAnnual(stateCode, memberAnnual, filing, fedTax*12)/12;
+    else if(st.exemptCap) stateTax = stateTaxAnnual(stateCode, Math.max(0, memberAnnual-st.exemptCap), filing, fedTax*12)/12;
   }
 
   const sgli=num("sgli",0);
