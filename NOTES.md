@@ -607,6 +607,25 @@ outside it (barracks do not count), and 30 days or less there.
 Remaining knowingly imperfect: DC's deduction; HoH collapsing to single
 everywhere; dependants never counted (exemptions and credits assume none).
 
+## The twelve military-exempt states (November 2026)
+
+All twelve (AZ, AR, IL, IN, IA, KY, MI, MN, MO, NM, ND, OK) **fully** exempt a
+resident's regular active-duty pay wherever stationed — the pre-checked box is
+right. Edge cases: Iowa excludes full-time Title 32 Guard (AGR); Indiana's full
+exemption starts in 2024 (was capped at $5,000); Missouri's 143.175 Guard/
+Reserve phase-in is a different section from active duty's 143.174.
+
+Rates, which apply only when the box is unchecked — nine were wrong:
+AR graduated 0-3.7% (Act 1, 2026 1st Ext. Sess.), deduction 2,470, $29 credit;
+IL exemption 2,925 (Comptroller bulletin citing IL-700-T); IA 3.8% (IDR,
+21 Oct 2025) and $40 credit; KY deduction 3,360, one per joint return (2026
+withholding formula); MN graduated 5.35-9.85%, deduction 15,300 / 30,600 (DOR,
+16 Dec 2025); MO graduated to 4.7% (2026 withholding formula); NM graduated
+1.5-5.9% (7-2-7, HB 252); ND 0 / 1.95 / 2.5% (2026 ND-1ES); OK 0-4.5% (HB 2764)
+plus the $1,000 exemption. AZ and IN were right. MI's 2026 exemption (5,900?)
+is unconfirmed from Treasury — left at 5,800. AR's $94,701-97,600 adjustment
+band is not modelled.
+
 ## Open items at handover (September 21, 2026)
 
 Written before a period of leave, so whoever picks this up is not starting from

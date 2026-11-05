@@ -829,6 +829,18 @@ G('State tax: hand-computed golden values');
        (taxed - excluded) * 12, 50000 * 0.03, 0.01);
   })();
 
+  /* Exempt-by-default states, Nov 2026 — rates used only when the box is
+     unchecked. Worked by hand from each state's 2026 schedule. */
+  eq('MN single $60,000 — 5.35% / 6.8% after the 15,300 deduction',
+     A.stateTaxAnnual('MN', 60000, 'single', 0), 33310*0.0535 + (60000-15300-33310)*0.068, 0.01);
+  eq('OK single $60,000 — 2026 brackets to 4.5%, deduction and $1,000 exemption',
+     A.stateTaxAnnual('OK', 60000, 'single', 0), 1150*0.025 + 2300*0.035 + (60000-6350-1000-7200)*0.045, 0.01);
+  eq('ND single $80,000 — 0% to 49,575, then 1.95%',
+     A.stateTaxAnnual('ND', 80000, 'single', 0), (80000-16100-49575)*0.0195, 0.01);
+  ok('IA is 3.8% for 2026', A.STATES.IA.flat === 0.038);
+  ok('all twelve military-exempt states stay pre-checked',
+     ['AZ','AR','IL','IN','IA','KY','MI','MN','MO','NM','ND','OK','MT'].every(c => A.STATES[c].exemptDefault));
+
   /* MT confirmed Nov 2026 against MCA 15-30-2103: 4.7% / 5.65% at 47,500. */
   eq('MT single $80,000 — 4.7% to $47,500, 5.65% above (was flat 5.9%)',
      A.stateTaxAnnual('MT', 80000, 'single', 0), 47500*0.047 + (80000-16100-47500)*0.0565, 0.01);

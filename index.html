@@ -644,8 +644,21 @@ const STATES = {
     },
     b:{single:[[0,.02],[500,.04],[3000,.05]],mfj:[[0,.02],[1000,.04],[6000,.05]]}},
   "AK":{name:"Alaska",none:true},
+  /* Exempt-by-default states, verified Nov 2026: all twelve FULLY exempt a
+     resident's regular active-duty pay wherever stationed (AZ ARS 43-1022(11);
+     AR instructions; IL Pub-102; IN IB #27, 2024+; IA 422.7(29) — not Title 32
+     AGR; KY KRS 141.019(1)(l); MI MCL 206.30(1)(e); MN 290.0132 subd. 12; MO
+     RSMo 143.174; NM 7-2-5.11; ND 57-38-01.2; OK 511-C). The rates below only
+     apply when the box is unchecked. Nine were wrong and are corrected from
+     each state's own 2026 publication or statute (sources in NOTES.md). MI
+     exemption left at 5,800: the 2026 5,900 was seen only in a federal payroll
+     bulletin, not from Treasury. */
   "AZ":{name:"Arizona",exemptDefault:true,flat:.025,sd:[16100,32200]},
-  "AR":{name:"Arkansas",exemptDefault:true,flat:.039,sd:[2340,4680]},
+  "AR":{name:"Arkansas",exemptDefault:true,sd:[2470,4940],credit:[29,58],
+    // Act 1, 2026 1st Ext. Sess.: above $94,700 the low brackets fall away
+    adjust:(tax,agi,fi,inc)=> inc>94700 ? 4700*.02+(inc-4700)*.037 : tax,
+    b:{single:[[0,0],[5600,.02],[11200,.03],[16000,.034],[26400,.037]],
+       mfj:[[0,0],[5600,.02],[11200,.03],[16000,.034],[26400,.037]]}},
   /* CA verified Nov 2026 against FTB Tax News, "2026 Indexing" (updated
      13 Oct 2026), which prints the 2026 Schedules X and Y and the 2026
      deduction and credit amounts beside the 2025 ones.
@@ -787,9 +800,9 @@ const STATES = {
      deducted after 120+ consecutive days of active duty (63-3022(h)). */
   "ID":{name:"Idaho",cond:true,sd:[16100,32200],credit:[155,310],b:{
     single:[[0,0],[4811,.053]],mfj:[[0,0],[9622,.053]]}},
-  "IL":{name:"Illinois",exemptDefault:true,flat:.0495,sd:[2775,5550]},
+  "IL":{name:"Illinois",exemptDefault:true,flat:.0495,sd:[2925,5850]},
   "IN":{name:"Indiana",exemptDefault:true,flat:.0295,sd:[1000,2000]},
-  "IA":{name:"Iowa",exemptDefault:true,flat:.039,sd:[16100,32200]},
+  "IA":{name:"Iowa",exemptDefault:true,flat:.038,sd:[16100,32200],credit:[40,80]},
   /* KS verified Oct 2026. Rates 5.2% / 5.58%, thresholds 23,000 single and
      46,000 joint; deduction 3,605 / 8,240 per the KDOR booklet.
 
@@ -802,7 +815,7 @@ const STATES = {
      found no evidence it was enacted and the 2026 estimated-tax form still
      prints the 2025 figures. Left alone deliberately; recheck in January. */
   "KS":{name:"Kansas",sd:[3605,8240],b:{single:[[0,.052],[23000,.0558]],mfj:[[0,.052],[46000,.0558]]}},
-  "KY":{name:"Kentucky",exemptDefault:true,flat:.035,sd:[3270,6540]},
+  "KY":{name:"Kentucky",exemptDefault:true,flat:.035,sd:[3360,3360]},  // one deduction per joint return
   /* LA: flat 3% verified Oct 2026 (LDR; R.S. 47:32(A) "three percent on net
      income"). Deduction, Nov 2026: 12,838 / 25,676 — LDR RIB 26-019 (28 Sep
      2026), the 2.7% CPI-U indexing of R.S. 47:294's 12,500 base. WAS the
@@ -839,7 +852,9 @@ const STATES = {
      any basic pay. A ballot initiative would cut the rate from 2029; not law. */
   "MA":{name:"Massachusetts",flat:.05,sd:[4400,8800]},
   "MI":{name:"Michigan",exemptDefault:true,flat:.0425,sd:[5800,11600]},
-  "MN":{name:"Minnesota",exemptDefault:true,flat:.068,sd:[14950,29900]},
+  "MN":{name:"Minnesota",exemptDefault:true,sd:[15300,30600],b:{
+    single:[[0,.0535],[33310,.068],[109430,.0785],[203150,.0985]],
+    mfj:[[0,.0535],[48700,.068],[193480,.0785],[337930,.0985]]}},
   /* MS verified Oct 2026: first 10,000 at 0%, excess at 4% (MSDOR "General
      Information", Tax Year 2026). Drops again to 3.75% for 2027 — diary it.
 
@@ -852,7 +867,9 @@ const STATES = {
      the current one. A state can contradict itself. */
   "MS":{name:"Mississippi",sd:[8300,16600],b:{
     single:[[0,0],[10000,.04]],mfj:[[0,0],[10000,.04]]}},
-  "MO":{name:"Missouri",exemptDefault:true,flat:.048,sd:[16100,32200]},
+  "MO":{name:"Missouri",exemptDefault:true,sd:[16100,32200],b:{
+    single:[[0,0],[1348,.02],[2696,.025],[4044,.03],[5392,.035],[6740,.04],[8088,.045],[9436,.047]],
+    mfj:[[0,0],[1348,.02],[2696,.025],[4044,.03],[5392,.035],[6740,.04],[8088,.045],[9436,.047]]}},
   /* MT verified Nov 2026 against MCA 15-30-2103 (temporary section, through
      31 Dec 2026): 4.7% on the first 47,500 (95,000 joint), 5.65% above.
      WAS a flat 5.9% — wrong for 2025 as well (4.7% to 21,100 then 5.9%).
@@ -903,7 +920,9 @@ const STATES = {
   "NJ":{name:"New Jersey",sd:[1000,2000],b:{
     single:[[0,.014],[20000,.0175],[35000,.035],[40000,.05525],[75000,.0637],[500000,.0897],[1000000,.1075]],
     mfj:[[0,.014],[20000,.0175],[50000,.0245],[70000,.035],[80000,.05525],[150000,.0637],[500000,.0897],[1000000,.1075]]}},
-  "NM":{name:"New Mexico",exemptDefault:true,flat:.049,sd:[16100,32200]},
+  "NM":{name:"New Mexico",exemptDefault:true,sd:[16100,32200],b:{
+    single:[[0,.015],[5500,.032],[16500,.043],[33500,.047],[66500,.049],[210000,.059]],
+    mfj:[[0,.015],[8000,.032],[25000,.043],[50000,.047],[100000,.049],[315000,.059]]}},
   /* NY verified Nov 2026 against IT-2105-I (2026) p.10 and Tax Law §601(a)-(c)
      para (vii) "after 2025 and before 2027"; the two agree row for row.
      WAS: a flat 5.5% — NY has nine brackets. Deduction 8,000 / 16,050 was right;
@@ -924,7 +943,8 @@ const STATES = {
      2025), deduction 12,750 / 25,500 (G.S. 105-153.5). HoH is 19,125 by statute
      but collapses to single here — see NOTES. 2027 is projected at 3.49%. */
   "NC":{name:"North Carolina",flat:.0399,sd:[12750,25500]},
-  "ND":{name:"North Dakota",exemptDefault:true,flat:.025,sd:[16100,32200]},
+  "ND":{name:"North Dakota",exemptDefault:true,sd:[16100,32200],b:{
+    single:[[0,0],[49575,.0195],[250400,.025]],mfj:[[0,0],[82800,.0195],[304850,.025]]}},
   /* OH verified Nov 2026 against ORC 5747.02(A)(3)(c) (HB 96, eff. 30 Sep
      2025): for 2026, nothing on the first 26,050, then "$332.00 plus 2.75% of
      the amount in excess of $26,050" — a $332 step, which the brackets alone
@@ -946,7 +966,8 @@ const STATES = {
       return t;
     },
     b:{single:[[0,0],[26050,.0275]],mfj:[[0,0],[26050,.0275]]}},
-  "OK":{name:"Oklahoma",exemptDefault:true,flat:.0475,sd:[6350,12700]},
+  "OK":{name:"Oklahoma",exemptDefault:true,sd:[6350,12700],persExempt:[1000,2000],b:{
+    single:[[0,0],[3750,.025],[4900,.035],[7200,.045]],mfj:[[0,0],[7500,.025],[9800,.035],[14400,.045]]}},
   /* OR verified Nov 2026. Brackets right (2026 OR-Estimate, 150-101-026,
      Rev. 10-07-25). Deduction 2,900 / 5,800 and exemption credit $260 per
      person are DOR's 2026 ESTIMATES (OR-Estimate; OR-W-4 instructions Rev.
