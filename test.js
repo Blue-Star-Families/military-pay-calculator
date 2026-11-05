@@ -665,7 +665,10 @@ G('State tax: hand-computed golden values');
   ok('UT is on the 2026 rate of 4.45%, not 4.5%', A.STATES.UT.flat === 0.0445);
   eq('UT single $50,000 — 4.45% less the phased taxpayer credit',
      A.stateTaxAnnual('UT', 50000, 'single', 0),
-     50000 * 0.0445 - (966 - 0.013 * (50000 - 16000)), 0.01);
+     50000 * 0.0445 - (966 - 0.013 * (50000 - 18696)), 0.01);
+  // 2026 TC-40 instructions line 15 (draft 10/20/26): 18,696 / 37,392.
+  ok('UT credit phase-out starts at the 2026 thresholds',
+     A.STATES.UT.creditPhase.threshold[0] === 18696 && A.STATES.UT.creditPhase.threshold[1] === 37392);
   // The taxpayer credit is 6% of the federal standard deduction (no dependants),
   // so it must move with STD_DED rather than being maintained by hand.
   ok('UT credit tracks 6% of the federal standard deduction',
@@ -797,6 +800,16 @@ G('State tax: hand-computed golden values');
      $5,300 personal exemption that was missing. */
   eq('VT single $60,000 — deduction and exemption, all at 3.35%',
      A.stateTaxAnnual('VT', 60000, 'single', 0), (60000 - 7650 - 5300) * 0.0335, 0.01);
+
+  /* HI brackets confirmed Nov 2026 against HRS 235-51(c): taxable income lands
+     exactly on 48,000, where the statute prints a base of $2,539 ($1 tolerance,
+     printed to the dollar). The add-back includes the $1,144 exemption, so this
+     fails if it is dropped again. */
+  eq('HI single, taxable exactly $48,000 = HRS 235-51 base $2,539',
+     A.stateTaxAnnual('HI', 48000 + 8000 + 1144, 'single', 0), 2539, 1);
+  /* MT confirmed Nov 2026 against MCA 15-30-2103: 4.7% / 5.65% at 47,500. */
+  eq('MT single $80,000 — 4.7% to $47,500, 5.65% above (was flat 5.9%)',
+     A.stateTaxAnnual('MT', 80000, 'single', 0), 47500*0.047 + (80000-16100-47500)*0.0565, 0.01);
 
   // MA verified Oct 2026: flat 5.00%, $4,400 / $8,800 personal exemption.
   ok('MA is flat 5.00%', A.STATES.MA.flat === 0.05);
