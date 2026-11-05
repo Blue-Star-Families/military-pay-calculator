@@ -1,0 +1,40 @@
+name: Yearly rate update reminder
+
+# Dec 1: next year's pay, BAH and tax figures publish this month.
+# Jan 2: the page must not keep last year's rates into the new year.
+on:
+  schedule:
+    - cron: '0 15 1 12 *'
+    - cron: '0 15 2 1 *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check the data year
+        id: check
+        run: |
+          set +e
+          node check-year.js --upcoming > report.txt
+          echo "due=$?" >> "$GITHUB_OUTPUT"
+          cat report.txt
+      - name: Open an issue if the update is due
+        if: steps.check.outputs.due == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Yearly rate update due ($(date -u +%Y-%m))"
+          if gh issue list --state open --search "in:title \"Yearly rate update due\"" --json number --jq '.[0].number' | grep -q .; then
+            echo "An update issue is already open."
+          else
+            gh issue create --title "$title" --body-file report.txt
+          fi

@@ -19,6 +19,7 @@ Internal reference for updating and maintaining the Military Take-Home Pay Estim
 | `LICENSE` | MIT. |
 | `NOTES.md` | This file. |
 | `embed-snippet.html` | What the content hub pastes to embed the calculator: auto-height frame, shared-link pass-through. Not deployed. |
+| `check-year.js` | Fails once the calendar year passes the badge's data year; prints the checklist below. `.github/workflows/yearly-update.yml` runs it on Dec 1 and Jan 2 and opens a GitHub issue. |
 | `Dockerfile` / `nginx.conf` / `.dockerignore` | Local preview that serves the site the way GitHub Pages does. Not deployed. |
 
 Check counts are deliberately not written here: each suite prints its own
@@ -52,7 +53,8 @@ Both `index.html` and `bah-data.js` must be deployed together or BAH auto-fill b
 4. **Federal:** update `BRACKETS`, `STD_DED`, and `SS_WAGE_BASE`.
 5. **Pay caps:** update the two **annual** figures `ES_LEVEL_II` and `ES_LEVEL_V` from the new OPM Salary Table EX. `PAY_CAP` derives from them — do not edit it directly.
 6. **State tax:** **not a spot-check.** Re-read every one of the 20 military-pay-taxing jurisdictions against its own revenue department (each entry's comment names the source used last time). In October 2026, 9 of 20 were wrong — five of them because a 2025 or 2026 bill changed the rate, which a spot-check would not catch. Watch for the date trap: states publish next year's estimated-tax forms in September, so a form dated in the current year may carry next year's figures.
-7. Update the year labels in the header, badge, and disclaimer text.
+7. Update the year labels in the header, badge, and disclaimer text. The badge year is what `check-year.js` reads, so change it last, once everything else is done.
+8. Re-check every entry listed as provisional under "The nine 'taxed only if stationed there' states" and in the state comments marked "not yet published".
 
 ## Calculation model (assumptions)
 
